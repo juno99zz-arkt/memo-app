@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>나의 메모</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1117">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="나의 메모">
+<style>
+  :root { --bg: #0f1117; --card: #1a1d2e; --card2: #232740; --border: #2d3154; --green: #22c55e; --red: #ef4444; --yellow: #f59e0b; --blue: #3b82f6; --purple: #a855f7; --text: #e2e8f0; --muted: #94a3b8; }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; margin: 0; min-height: 100vh; -webkit-tap-highlight-color: transparent; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; min-width: 0; }
+  .hidden { display: none !important; }
+  .btn { padding: 10px 14px; border-radius: 10px; background: var(--card2); border: 1px solid var(--border); font-size: 14px; white-space: nowrap; }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.danger { color: var(--red); }
+  .btn:disabled { opacity: .5; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--card2); border: 1px solid var(--border); font-size: 16px; }
+  .field { width: 100%; padding: 11px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); outline: none; font-size: 15px; }
+  .field:focus { border-color: var(--blue); }
+  textarea.field { resize: vertical; min-height: 96px; line-height: 1.5; }
+  label.lbl { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+
+  /* 잠금 화면 */
+  #lock { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #lock .card { width: 100%; max-width: 380px; padding: 28px 22px; }
+  #lock h1 { margin: 0 0 4px; font-size: 22px; }
+  .err { color: var(--red); font-size: 13px; min-height: 18px; margin-top: 10px; white-space: pre-line; }
+
+  /* 헤더 */
+  header.top { position: sticky; top: 0; z-index: 5; background: rgba(15,17,23,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding-top: env(safe-area-inset-top); }
+  header.top .in { max-width: 720px; margin: 0 auto; padding: 10px 16px; }
+  .week-title { font-size: 18px; font-weight: 700; }
+  .sync { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--muted); }
+  .sync.ok { color: var(--green); } .sync.busy { color: var(--yellow); } .sync.bad { color: var(--red); }
+  .tabs { display: flex; gap: 6px; margin-top: 10px; }
+  .tab { flex: 1; padding: 8px; border-radius: 9px; background: var(--card2); color: var(--muted); font-size: 14px; }
+  .tab.active { background: var(--blue); color: #fff; font-weight: 600; }
+
+  /* 상태 */
+  .chip { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+  .st-todo  { background: rgba(59,130,246,.14); color: #93c5fd; border-color: rgba(59,130,246,.35); }
+  .st-doing { background: rgba(245,158,11,.14); color: #fcd34d; border-color: rgba(245,158,11,.35); }
+  .st-done  { background: rgba(34,197,94,.14);  color: #86efac; border-color: rgba(34,197,94,.35); }
+  .st-hold  { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.3); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
+  .stat { padding: 10px; text-align: center; border-radius: 10px; }
+  .stat b { display: block; font-size: 20px; }
+  .bar { height: 8px; border-radius: 999px; background: var(--card2); overflow: hidden; display: flex; }
+  .bar span { display: block; height: 100%; }
+
+  /* 메모 카드 */
+  .memo { padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .memo h3 { margin: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .memo .items { margin: 10px 0 0; padding: 0; list-style: none; }
+  .memo .items li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 14px; }
+  .memo .items li .chip { cursor: pointer; }
+  .memo .items li.done-t span.t { color: var(--muted); text-decoration: line-through; }
+  .memo .note { margin-top: 8px; font-size: 13px; color: var(--muted); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(168,85,247,.15); color: #d8b4fe; }
+  .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+
+  /* 주간 정리 */
+  .group { padding: 14px; margin-bottom: 10px; }
+  .group h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .group ul { margin: 0; padding-left: 18px; }
+  .group li { padding: 3px 0; font-size: 14px; }
+  .group li .from { color: var(--muted); font-size: 12px; }
+
+  /* 편집기 */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { width: 100%; max-width: 720px; max-height: 92vh; overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  @media (min-width: 760px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
+  .item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .item-row .field { padding: 9px 10px; }
+  .fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 10; width: 58px; height: 58px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 30px; box-shadow: 0 6px 20px rgba(59,130,246,.45); }
+  .toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--card2); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; z-index: 30; font-size: 14px; max-width: 90vw; }
+  pre.copy { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- 잠금 화면 -->
+<div id="lock">
+  <div class="card">
+    <h1>🔒 나의 메모</h1>
+    <div class="muted small" id="lockSub">비밀번호를 입력하세요</div>
+    <form id="lockForm" autocomplete="off">
+      <label class="lbl">비밀번호</label>
+      <input class="field" type="password" id="pw" autocomplete="current-password" required>
+      <div id="newOnly" class="hidden">
+        <label class="lbl">비밀번호 확인</label>
+        <input class="field" type="password" id="pw2" autocomplete="new-password">
+        <div class="muted small" style="margin-top:6px">⚠️ 비밀번호를 잊으면 복구할 수 없습니다. 12자 이상 권장.</div>
+      </div>
+      <details id="tokenBox" style="margin-top:14px">
+        <summary class="muted small">GitHub 토큰 (처음 한 번 · 저장에 필요)</summary>
+        <input class="field" type="password" id="tokenIn" placeholder="github_pat_..." style="margin-top:8px">
+        <div class="muted small" style="margin-top:6px">Fine-grained 토큰 · 이 저장소만 · Contents: Read and write.<br>토큰은 메모와 함께 암호화되어 저장됩니다.</div>
+      </details>
+      <button class="btn primary" style="width:100%;margin-top:18px" id="unlockBtn">열기</button>
+      <div class="err" id="lockErr"></div>
+    </form>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div id="app" class="hidden">
+  <header class="top"><div class="in">
+    <div class="row">
+      <button class="icon-btn" id="prevWk" aria-label="이전 주">‹</button>
+      <div class="grow" style="text-align:center">
+        <div class="week-title" id="wkTitle"></div>
+        <div class="muted small" id="wkRange"></div>
+      </div>
+      <button class="icon-btn" id="nextWk" aria-label="다음 주">›</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="sync" id="sync">대기</span>
+      <span class="muted small grow" id="wkBadge"></span>
+      <select class="btn" id="wkSelect" style="padding:6px 8px;font-size:12px" aria-label="주 선택"></select>
+      <button class="icon-btn" id="settingsBtn" aria-label="설정">⚙</button>
+      <button class="icon-btn" id="lockBtn" aria-label="잠금">🔒</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="memos">메모</button>
+      <button class="tab" data-tab="summary">주간 정리</button>
+    </div>
+  </div></header>
+
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div id="memosView"></div>
+    <div id="summaryView" class="hidden"></div>
+  </div>
+  <button class="fab" id="addBtn" aria-label="새 메모">＋</button>
+</div>
+
+<!-- 편집기 -->
+<div class="sheet-bg hidden" id="editor">
+  <div class="sheet">
+    <div class="row">
+      <b class="grow" id="edHead">새 메모</b>
+      <button class="icon-btn" id="edClose" aria-label="닫기">✕</button>
+    </div>
+    <label class="lbl">제목</label>
+    <input class="field" id="edTitle" placeholder="무엇에 관한 메모인가요?">
+    <label class="lbl">분류</label>
+    <input class="field" id="edTag" list="tagList" placeholder="업무 / 투자 / 개인 / 아이디어">
+    <datalist id="tagList"></datalist>
+    <label class="lbl">할 일 · 진행 항목 <span class="muted">(상태 칩을 눌러 변경: 준비→진행→완료→보류)</span></label>
+    <div id="edItems"></div>
+    <button class="btn" id="edAddItem" style="width:100%">＋ 항목 추가</button>
+    <label class="lbl">메모</label>
+    <textarea class="field" id="edNote" placeholder="자유 메모, 링크, 생각..."></textarea>
+    <div class="muted small" id="edMeta" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn danger" id="edDelete">삭제</button>
+      <span class="grow"></span>
+      <button class="btn" id="edCancel">취소</button>
+      <button class="btn primary" id="edSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div class="sheet-bg hidden" id="settings">
+  <div class="sheet">
+    <div class="row"><b class="grow">설정</b><button class="icon-btn" data-close="settings" aria-label="닫기">✕</button></div>
+    <label class="lbl">저장소 (owner/repo)</label>
+    <input class="field" id="sRepo">
+    <div class="row">
+      <div class="grow"><label class="lbl">브랜치</label><input class="field" id="sBranch"></div>
+      <div class="grow"><label class="lbl">파일 경로</label><input class="field" id="sPath"></div>
+    </div>
+    <label class="lbl">GitHub 토큰 (암호화 저장)</label>
+    <input class="field" type="password" id="sToken" placeholder="github_pat_...">
+    <label class="row small" style="margin-top:14px"><input type="checkbox" id="sCarry"> 주 마감 시 미완료(준비·진행) 항목을 다음 주로 자동 이월</label>
+    <div class="row" style="margin-top:16px"><span class="grow"></span><button class="btn primary" id="sSave">설정 저장</button></div>
+
+    <label class="lbl" style="margin-top:24px">비밀번호 변경</label>
+    <input class="field" type="password" id="sPw1" placeholder="새 비밀번호" autocomplete="new-password">
+    <input class="field" type="password" id="sPw2" placeholder="새 비밀번호 확인" style="margin-top:8px" autocomplete="new-password">
+    <div class="row" style="margin-top:8px"><span class="grow"></span><button class="btn" id="sPwBtn">비밀번호 변경</button></div>
+
+    <label class="lbl" style="margin-top:24px">백업</label>
+    <div class="row"><button class="btn" id="sExport">JSON 내보내기 (복호화본)</button><button class="btn" id="sSync">지금 동기화</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ───────── 설정 기본값 (평문 · 비밀 아님) ───────── */
+const DEFAULT_CFG = { repo: 'juno99zz-arkt/memo-app', branch: 'main', path: 'vault.json' };
+const KDF_ITER = 600000;
+const ST = { todo: '준비', doing: '진행', done: '완료', hold: '보류' };
+const ST_ORDER = ['todo', 'doing', 'done', 'hold'];
+const ST_COLOR = { todo: 'var(--blue)', doing: 'var(--yellow)', done: 'var(--green)', hold: '#64748b' };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
+function cfg() { try { return { ...DEFAULT_CFG, ...JSON.parse(lsGet('memo.cfg') || '{}') }; } catch { return { ...DEFAULT_CFG }; } }
+
+/* ───────── 주(ISO week, 월요일 시작, 현지 시간) ───────── */
+function isoWeek(d = new Date()) {
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (t.getDay() + 6) % 7;            // 월=0
+  t.setDate(t.getDate() - day + 3);            // 그 주 목요일
+  const y = t.getFullYear();
+  const jan4 = new Date(y, 0, 4);
+  const w = 1 + Math.round(((t - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  return `${y}-W${String(w).padStart(2, '0')}`;
+}
+function weekMonday(key) {
+  const [y, w] = key.split('-W').map(Number);
+  const jan4 = new Date(y, 0, 4);
+  const mon = new Date(y, 0, 4 - ((jan4.getDay() + 6) % 7));
+  mon.setDate(mon.getDate() + (w - 1) * 7);
+  return mon;
+}
+function shiftWeek(key, n) { const m = weekMonday(key); m.setDate(m.getDate() + 7 * n); return isoWeek(m); }
+function weekRange(key) {
+  const m = weekMonday(key), s = new Date(m); s.setDate(s.getDate() + 6);
+  const f = d => `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${m.getFullYear()} · ${f(m)}(월) ~ ${f(s)}(일)`;
+}
+const fmtDT = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+/* ───────── 암호화 (PBKDF2-SHA256 → AES-256-GCM) ───────── */
+const te = new TextEncoder(), td = new TextDecoder();
+function b64(buf) { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(s) { const b = atob(s), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+async function deriveKey(pw, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function sealVault(data, key, salt, iter) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, te.encode(JSON.stringify(data)));
+  return { app: 'memo-vault', v: 1, kdf: { name: 'PBKDF2', hash: 'SHA-256', iter, salt: b64(salt) }, iv: b64(iv), ct: b64(ct) };
+}
+async function openVault(file, key) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(file.iv) }, key, unb64(file.ct));
+  return JSON.parse(td.decode(pt));
+}
+
+/* ───────── GitHub 저장소 입출력 ───────── */
+function ghUrl(c) { return `https://api.github.com/repos/${c.repo}/contents/${c.path.split('/').map(encodeURIComponent).join('/')}`; }
+function ghHeaders(token) { const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }; if (token) h.Authorization = `Bearer ${token}`; return h; }
+async function ghRead(token) {
+  const c = cfg();
+  const r = await fetch(`${ghUrl(c)}?ref=${encodeURIComponent(c.branch)}&t=${Date.now()}`, { headers: ghHeaders(token), cache: 'no-store' });
+  if (r.status === 404) return { missing: true };
+  if (!r.ok) throw new Error(`GitHub 읽기 실패 (${r.status})`);
+  const j = await r.json();
+  let text = j.content ? atob(j.content.replace(/\n/g, '')) : '';
+  if (!text && j.download_url) text = await (await fetch(j.download_url, { cache: 'no-store' })).text();
+  return { sha: j.sha, file: JSON.parse(text) };
+}
+async function ghWrite(token, file, sha, msg) {
+  const c = cfg();
+  const body = { message: msg, content: btoa(JSON.stringify(file)), branch: c.branch };
+  if (sha) body.sha = sha;
+  const r = await fetch(ghUrl(c), { method: 'PUT', headers: { ...ghHeaders(token), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.status === 409 || r.status === 422) return { conflict: true };
+  if (!r.ok) throw new Error(`GitHub 저장 실패 (${r.status})${r.status === 401 || r.status === 403 ? ' · 토큰 권한 확인' : ''}`);
+  return { sha: (await r.json()).content.sha };
+}
+
+/* ───────── 상태 ───────── */
+let KEY = null, SALT = null, ITER = KDF_ITER, SHA = null;
+let DB = null;               // { v, settings:{token,carry,updated}, weeks:{ 'YYYY-Www': { memos:[], closedAt } } }
+let curWeek = isoWeek(), curTab = 'memos', dirty = false, saving = false, saveTimer = null;
+
+function emptyDB() { return { v: 1, settings: { token: '', carry: true, updated: now() }, weeks: {} }; }
+function week(key) { return DB.weeks[key] || (DB.weeks[key] = { memos: [] }); }
+function liveMemos(key) { return (DB.weeks[key]?.memos || []).filter(m => !m.deleted); }
+
+/* 두 기기에서 동시에 수정했을 때: 메모 id 기준으로 더 최근 것을 채택 (삭제는 deleted 표시로 전파) */
+function mergeDB(a, b) {
+  const out = { v: 1, settings: (a.settings?.updated || '') >= (b.settings?.updated || '') ? a.settings : b.settings, weeks: {} };
+  for (const k of new Set([...Object.keys(a.weeks || {}), ...Object.keys(b.weeks || {})])) {
+    const wa = a.weeks?.[k] || { memos: [] }, wb = b.weeks?.[k] || { memos: [] }, byId = new Map();
+    for (const m of [...wa.memos, ...wb.memos]) { const p = byId.get(m.id); if (!p || (m.updated || '') > (p.updated || '')) byId.set(m.id, m); }
+    out.weeks[k] = { memos: [...byId.values()].sort((x, y) => (x.created || '').localeCompare(y.created || '')) };
+    const closed = [wa.closedAt, wb.closedAt].filter(Boolean).sort()[0];
+    if (closed) out.weeks[k].closedAt = closed;
+  }
+  return out;
+}
+
+/* ───────── 동기화 ───────── */
+function setSync(text, cls) { const s = $('sync'); s.textContent = text; s.className = 'sync ' + (cls || ''); }
+async function cacheLocal() { lsSet('memo.cache', JSON.stringify(await sealVault(DB, KEY, SALT, ITER))); }
+function scheduleSave() { dirty = true; setSync('저장 대기', 'busy'); clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 1200); }
+
+async function saveNow() {
+  clearTimeout(saveTimer);
+  if (saving) { saveTimer = setTimeout(saveNow, 800); return; }
+  saving = true;
+  try {
+    await cacheLocal();
+    const token = DB.settings.token;
+    if (!token) { setSync('기기에만 저장됨 · 토큰 필요', 'bad'); return; }
+    setSync('저장 중…', 'busy');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await ghWrite(token, await sealVault(DB, KEY, SALT, ITER), SHA, `메모 저장: ${curWeek}`);
+      if (!res.conflict) { SHA = res.sha; dirty = false; setSync('저장됨 ✓', 'ok'); return; }
+      const remote = await ghRead(token);           // 다른 기기에서 먼저 저장 → 합치고 다시 시도
+      if (remote.missing) { SHA = null; continue; }
+      DB = mergeDB(DB, await openVault(remote.file, KEY)); SHA = remote.sha; render();
+    }
+    throw new Error('저장 충돌이 계속됩니다');
+  } catch (e) { setSync('저장 실패', 'bad'); toast(e.message); }
+  finally { saving = false; }
+}
+
+async function pull() {
+  const token = DB.settings.token;
+  setSync('불러오는 중…', 'busy');
+  try {
+    const remote = await ghRead(token);
+    if (remote.missing) { setSync(token ? '원격 없음 · 저장 시 생성' : '기기에만 저장됨', token ? 'busy' : 'bad'); if (token) scheduleSave(); return; }
+    const theirs = await openVault(remote.file, KEY).catch(() => null);
+    if (!theirs) { setSync('원격 복호화 실패', 'bad'); toast('원격 메모가 다른 비밀번호로 저장되어 있습니다'); return; }
+    SHA = remote.sha;
+    const merged = mergeDB(DB, theirs);
+    const changed = JSON.stringify(merged) !== JSON.stringify(theirs);
+    DB = merged; await cacheLocal(); render();
+    if (changed && token) scheduleSave(); else setSync('동기화됨 ✓', 'ok');
+  } catch (e) { setSync('오프라인', 'bad'); }
+}
+
+/* ───────── 잠금 해제 ───────── */
+let remoteAtLock = null;     // 잠금 화면에서 미리 읽어둔 원격 파일
+async function prepareLock() {
+  const cached = lsGet('memo.cache');
+  try { remoteAtLock = await ghRead(null); } catch { remoteAtLock = null; }
+  const hasVault = cached || (remoteAtLock && !remoteAtLock.missing);
+  if (!hasVault && remoteAtLock?.missing) {
+    $('lockSub').textContent = '처음 사용 · 새 비밀번호를 정하세요';
+    $('newOnly').classList.remove('hidden'); $('pw2').required = true; $('unlockBtn').textContent = '메모장 만들기';
+    $('tokenBox').open = true;
+  } else if (!hasVault) {
+    $('lockSub').textContent = '저장소를 읽지 못했습니다 · 비공개 저장소면 토큰을 입력하세요';
+    $('tokenBox').open = true;
+  }
+}
+
+$('lockForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = $('pw').value, tokenIn = $('tokenIn').value.trim(), err = $('lockErr');
+  err.textContent = ''; $('unlockBtn').disabled = true; $('unlockBtn').textContent = '여는 중…';
+  try {
+    let remote = remoteAtLock;
+    if (tokenIn && (!remote || remote.missing)) remote = await ghRead(tokenIn).catch(() => remote);
+    const cachedRaw = lsGet('memo.cache');
+    const source = (remote && !remote.missing) ? remote.file : (cachedRaw ? JSON.parse(cachedRaw) : null);
+    if (!source) {
+      if (!$('pw2').required) { $('newOnly').classList.remove('hidden'); $('pw2').required = true; throw new Error('메모장이 없습니다. 새 비밀번호를 확인 입력하면 새로 만듭니다.'); }
+      if (pw.length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다');
+      if (pw !== $('pw2').value) throw new Error('비밀번호 확인이 일치하지 않습니다');
+      SALT = crypto.getRandomValues(new Uint8Array(16)); ITER = KDF_ITER;
+      KEY = await deriveKey(pw, SALT, ITER);
+      DB = emptyDB(); DB.settings.token = tokenIn;
+      SHA = null;
+      await enterApp(); scheduleSave(); return;
+    }
+    SALT = unb64(source.kdf.salt); ITER = source.kdf.iter;
+    KEY = await deriveKey(pw, SALT, ITER);
+    let data;
+    try { data = await openVault(source, KEY); } catch { throw new Error('비밀번호가 틀렸습니다'); }
+    if (source === remote?.file) SHA = remote.sha;
+    // 원격과 기기 캐시가 둘 다 있으면 합침 (오프라인 중 수정분 보존)
+    if (cachedRaw && source !== null && remote && !remote.missing) {
+      const local = JSON.parse(cachedRaw);
+      if (local.kdf?.salt === source.kdf.salt) {
+        const mine = await openVault(local, KEY).catch(() => null);
+        if (mine) { const merged = mergeDB(mine, data); if (JSON.stringify(merged) !== JSON.stringify(data)) dirty = true; data = merged; }
+      }
+    }
+    DB = data;
+    if (tokenIn && tokenIn !== DB.settings.token) { DB.settings.token = tokenIn; DB.settings.updated = now(); }
+    await enterApp();
+    if (!remote || remote.missing) await pull(); else { await cacheLocal(); dirty ? scheduleSave() : setSync('동기화됨 ✓', 'ok'); }
+  } catch (ex) { err.textContent = ex.message; }
+  finally { $('unlockBtn').disabled = false; if ($('unlockBtn').textContent === '여는 중…') $('unlockBtn').textContent = '열기'; }
+});
+
+async function enterApp() {
+  $('pw').value = $('pw2').value = $('tokenIn').value = '';
+  $('lock').classList.add('hidden'); $('app').classList.remove('hidden');
+  curWeek = isoWeek();
+  if (closePastWeeks()) dirty = true;
+  render();
+  if (!DB.settings.token) toast('설정(⚙)에서 GitHub 토큰을 넣으면 저장소에 동기화됩니다');
+}
+
+async function lock() {
+  if (dirty) await saveNow();
+  KEY = null; DB = null; SHA = null;
+  $('app').classList.add('hidden'); $('editor').classList.add('hidden'); $('settings').classList.add('hidden');
+  $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
+  $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
+  prepareLock(); setTimeout(() => $('pw').focus(), 50);
+}
+
+/* ───────── 주간 마감 · 이월 ───────── */
+function collect(key) {
+  const g = { todo: [], doing: [], done: [], hold: [] };
+  for (const m of liveMemos(key)) for (const it of (m.items || [])) if (it.text.trim()) g[it.status || 'todo'].push({ text: it.text.trim(), memo: m.title || '(제목 없음)', tag: m.tag || '', memoId: m.id });
+  return g;
+}
+
+/* 지난 주 중 마감 안 된 주를 마감하고, 설정에 따라 미완료 항목을 다음 주로 이월. 이월 메모 id는 고정이라 여러 기기에서 실행해도 중복되지 않음 */
+function closePastWeeks() {
+  let changed = false;
+  for (const k of Object.keys(DB.weeks).sort()) {
+    if (k >= curWeek || DB.weeks[k].closedAt || !liveMemos(k).length) continue;
+    DB.weeks[k].closedAt = now(); changed = true;
+    if (DB.settings.carry) changed = carryOver(k) || changed;
+  }
+  return changed;
+}
+function carryOver(fromKey) {
+  const g = collect(fromKey), items = [...g.doing, ...g.todo];
+  if (!items.length) return false;
+  const to = shiftWeek(fromKey, 1), id = `carry-${fromKey}`;
+  if (week(to).memos.some(m => m.id === id)) return false;
+  week(to).memos.unshift({
+    id, created: weekMonday(to).toISOString(), updated: now(), title: `${fromKey} 이월 항목`, tag: '이월',
+    items: items.map(x => ({ id: uid(), text: x.text, status: g.doing.includes(x) ? 'doing' : 'todo' })),
+    note: `지난주 미완료 ${items.length}건 · 출처: ${[...new Set(items.map(x => x.memo))].join(', ')}`,
+  });
+  return true;
+}
+
+/* ───────── 렌더링 ───────── */
+function render() {
+  if (!DB) return;
+  const mm = liveMemos(curWeek), g = collect(curWeek), total = ST_ORDER.reduce((s, k) => s + g[k].length, 0);
+  $('wkTitle').textContent = curWeek === isoWeek() ? `${curWeek} · 이번 주` : curWeek;
+  $('wkRange').textContent = weekRange(curWeek);
+  const w = DB.weeks[curWeek];
+  $('wkBadge').textContent = w?.closedAt ? `🗂 마감됨 ${fmtDT(w.closedAt)}` : (curWeek < isoWeek() ? '' : `메모 ${mm.length}개`);
+  $('stats').innerHTML = ST_ORDER.map(k => `<div class="stat card"><span class="chip st-${k}">${ST[k]}</span><b>${g[k].length}</b></div>`).join('');
+
+  // 주 선택 목록: 메모가 있는 주 + 이번 주
+  const keys = [...new Set([...Object.keys(DB.weeks).filter(k => liveMemos(k).length), isoWeek(), curWeek])].sort().reverse();
+  $('wkSelect').innerHTML = keys.map(k => `<option value="${k}" ${k === curWeek ? 'selected' : ''}>${k} (${liveMemos(k).length})</option>`).join('');
+
+  // 메모 목록
+  $('memosView').innerHTML = mm.length ? [...mm].reverse().map(m => `
+    <div class="memo card" data-id="${m.id}">
+      <div class="row"><h3 class="grow">${esc(m.title || '(제목 없음)')}</h3>${m.tag ? `<span class="tag">${esc(m.tag)}</span>` : ''}</div>
+      <div class="muted small" style="margin-top:4px">${fmtDT(m.created)}${m.updated !== m.created ? ` · 수정 ${fmtDT(m.updated)}` : ''}</div>
+      ${(m.items || []).filter(i => i.text.trim()).length ? `<ul class="items">${m.items.filter(i => i.text.trim()).map(i => `
+        <li class="${i.status === 'done' ? 'done-t' : ''}"><span class="chip st-${i.status}" data-cycle="${m.id}|${i.id}">${ST[i.status]}</span><span class="t">${esc(i.text)}</span></li>`).join('')}</ul>` : ''}
+      ${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
+    </div>`).join('') : `<div class="empty">이 주에는 메모가 없습니다<br><br><button class="btn primary" onclick="openEditor()">＋ 첫 메모 쓰기</button></div>`;
+
+  // 주간 정리
+  const pct = k => total ? (g[k].length / total * 100) : 0;
+  const rate = total ? Math.round(g.done.length / total * 100) : 0;
+  const tags = {}; for (const m of mm) if (m.tag) tags[m.tag] = (tags[m.tag] || 0) + 1;
+  $('summaryView').innerHTML = `
+    <div class="card group">
+      <div class="row"><b class="grow">완료율 ${rate}%</b><span class="muted small">항목 ${total}개 · 메모 ${mm.length}개</span></div>
+      <div class="bar" style="margin-top:10px">${ST_ORDER.map(k => `<span style="width:${pct(k)}%;background:${ST_COLOR[k]}"></span>`).join('')}</div>
+      ${Object.keys(tags).length ? `<div class="row" style="margin-top:10px;flex-wrap:wrap">${Object.entries(tags).map(([t, n]) => `<span class="tag">${esc(t)} ${n}</span>`).join('')}</div>` : ''}
+    </div>
+    ${['done', 'doing', 'todo', 'hold'].map(k => `
+      <div class="card group">
+        <h4><span class="chip st-${k}">${ST[k]}</span> ${g[k].length}건</h4>
+        ${g[k].length ? `<ul>${g[k].map(x => `<li>${esc(x.text)} <span class="from">· ${esc(x.memo)}</span></li>`).join('')}</ul>` : `<div class="muted small">없음</div>`}
+      </div>`).join('')}
+    <div class="card group">
+      <h4>📋 공유용 요약</h4>
+      <pre class="copy" id="copyText">${esc(summaryText(curWeek, g, rate))}</pre>
+      <div class="row" style="margin-top:10px;flex-wrap:wrap">
+        <button class="btn" id="copyBtn">복사</button>
+        <span class="grow"></span>
+        ${w?.closedAt ? `<button class="btn" id="reopenBtn">마감 취소</button>` : `<button class="btn" id="closeBtn">이 주 마감</button>`}
+        <button class="btn" id="carryBtn" ${(g.doing.length + g.todo.length) ? '' : 'disabled'}>미완료 → 다음 주 이월</button>
+      </div>
+    </div>`;
+  $('memosView').classList.toggle('hidden', curTab !== 'memos');
+  $('summaryView').classList.toggle('hidden', curTab !== 'summary');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === curTab));
+}
+
+/* 메신저에 붙여넣기 좋게 한 줄 26자 이내로 */
+function clip(s, n = 26) { const a = [...s]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : s; }
+function summaryText(key, g, rate) {
+  const lines = [clip(`[${key} 주간 정리]`), clip(`완료율 ${rate}% · 완료${g.done.length} 진행${g.doing.length} 준비${g.todo.length}`)];
+  for (const k of ['done', 'doing', 'todo', 'hold']) {
+    if (!g[k].length) continue;
+    lines.push('', `■ ${ST[k]} ${g[k].length}건`);
+    for (const x of g[k]) lines.push(clip(`· ${x.text}`));
+  }
+  return lines.join('\n');
+}
+
+/* ───────── 편집기 ───────── */
+let edMemo = null;
+function openEditor(id) {
+  const m = id ? liveMemos(curWeek).find(x => x.id === id) : null;
+  edMemo = m ? JSON.parse(JSON.stringify(m)) : { id: uid(), created: null, title: '', tag: '', items: [{ id: uid(), text: '', status: 'todo' }], note: '' };
+  $('edHead').textContent = m ? '메모 편집' : `새 메모 · ${curWeek}`;
+  $('edTitle').value = edMemo.title; $('edTag').value = edMemo.tag; $('edNote').value = edMemo.note;
+  $('edMeta').textContent = m ? `작성 ${fmtDT(m.created)} · 수정 ${fmtDT(m.updated)}` : '';
+  $('edDelete').classList.toggle('hidden', !m);
+  const tags = new Set(['업무', '투자', '개인', '아이디어']); for (const w of Object.values(DB.weeks)) for (const x of w.memos) if (x.tag && !x.deleted) tags.add(x.tag);
+  $('tagList').innerHTML = [...tags].map(t => `<option value="${esc(t)}">`).join('');
+  renderItems();
+  $('editor').classList.remove('hidden');
+  if (!m) setTimeout(() => $('edTitle').focus(), 50);
+}
+function renderItems() {
+  $('edItems').innerHTML = edMemo.items.map((it, i) => `
+    <div class="item-row">
+      <button class="chip st-${it.status}" data-ed-cycle="${i}" type="button">${ST[it.status]}</button>
+      <input class="field grow" data-ed-text="${i}" value="${esc(it.text)}" placeholder="항목 ${i + 1}">
+      <button class="icon-btn" data-ed-del="${i}" type="button" aria-label="항목 삭제">−</button>
+    </div>`).join('');
+}
+function closeEditor() { $('editor').classList.add('hidden'); edMemo = null; }
+$('edItems').addEventListener('input', e => { const i = e.target.dataset.edText; if (i != null) edMemo.items[i].text = e.target.value; });
+$('edItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.edText != null && !e.isComposing) { e.preventDefault(); $('edAddItem').click(); } });
+$('edItems').addEventListener('click', e => {
+  const c = e.target.dataset.edCycle, d = e.target.dataset.edDel;
+  if (c != null) { const it = edMemo.items[c]; it.status = ST_ORDER[(ST_ORDER.indexOf(it.status) + 1) % 4]; renderItems(); }
+  if (d != null) { edMemo.items.splice(d, 1); renderItems(); }
+});
+$('edAddItem').onclick = () => { edMemo.items.push({ id: uid(), text: '', status: 'todo' }); renderItems(); const ins = $('edItems').querySelectorAll('input'); ins[ins.length - 1].focus(); };
+$('edClose').onclick = $('edCancel').onclick = closeEditor;
+$('edSave').onclick = () => {
+  edMemo.title = $('edTitle').value.trim(); edMemo.tag = $('edTag').value.trim(); edMemo.note = $('edNote').value;
+  edMemo.items = edMemo.items.filter(i => i.text.trim());
+  if (!edMemo.title && !edMemo.items.length && !edMemo.note.trim()) { closeEditor(); return; }
+  if (!edMemo.title) edMemo.title = edMemo.items[0]?.text || edMemo.note.trim().split('\n')[0].slice(0, 40);
+  const ts = now(); edMemo.updated = ts; edMemo.created = edMemo.created || ts;
+  const list = week(curWeek).memos, i = list.findIndex(x => x.id === edMemo.id);
+  i >= 0 ? (list[i] = edMemo) : list.push(edMemo);
+  closeEditor(); render(); scheduleSave();
+};
+$('edDelete').onclick = () => {
+  if (!confirm('이 메모를 삭제할까요?')) return;
+  const m = week(curWeek).memos.find(x => x.id === edMemo.id);
+  if (m) { m.deleted = true; m.updated = now(); }
+  closeEditor(); render(); scheduleSave();
+};
+
+/* ───────── 화면 이벤트 ───────── */
+$('memosView').addEventListener('click', e => {
+  const cyc = e.target.dataset.cycle;
+  if (cyc) {   // 목록에서 바로 상태 변경
+    e.stopPropagation();
+    const [mid, iid] = cyc.split('|'), m = week(curWeek).memos.find(x => x.id === mid), it = m?.items.find(x => x.id === iid);
+    if (it) { it.status = ST_ORDER[(ST_ORDER.indexOf(it.status) + 1) % 4]; m.updated = now(); render(); scheduleSave(); }
+    return;
+  }
+  const card = e.target.closest('.memo'); if (card) openEditor(card.dataset.id);
+});
+$('summaryView').addEventListener('click', async e => {
+  const id = e.target.id;
+  if (id === 'copyBtn') { try { await navigator.clipboard.writeText($('copyText').textContent); toast('복사했습니다'); } catch { toast('복사 실패 · 길게 눌러 선택하세요'); } }
+  if (id === 'closeBtn') { week(curWeek).closedAt = now(); if (DB.settings.carry) carryOver(curWeek); render(); scheduleSave(); toast('이 주를 마감했습니다'); }
+  if (id === 'reopenBtn') { delete week(curWeek).closedAt; render(); scheduleSave(); }
+  if (id === 'carryBtn') { if (carryOver(curWeek)) { render(); scheduleSave(); toast(`${shiftWeek(curWeek, 1)}로 이월했습니다`); } else toast('이미 이월되었습니다'); }
+});
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { curTab = t.dataset.tab; render(); });
+$('prevWk').onclick = () => { curWeek = shiftWeek(curWeek, -1); render(); };
+$('nextWk').onclick = () => { curWeek = shiftWeek(curWeek, 1); render(); };
+$('wkSelect').onchange = e => { curWeek = e.target.value; render(); };
+$('addBtn').onclick = () => openEditor();
+$('lockBtn').onclick = lock;
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dataset.close).classList.add('hidden'));
+document.querySelectorAll('.sheet-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.id === 'editor' ? closeEditor() : bg.classList.add('hidden'); }));
+
+/* ───────── 설정 ───────── */
+$('settingsBtn').onclick = () => {
+  const c = cfg();
+  $('sRepo').value = c.repo; $('sBranch').value = c.branch; $('sPath').value = c.path;
+  $('sToken').value = DB.settings.token || ''; $('sCarry').checked = !!DB.settings.carry;
+  $('sPw1').value = $('sPw2').value = '';
+  $('settings').classList.remove('hidden');
+};
+$('sSave').onclick = async () => {
+  const c = { repo: $('sRepo').value.trim() || DEFAULT_CFG.repo, branch: $('sBranch').value.trim() || DEFAULT_CFG.branch, path: $('sPath').value.trim() || DEFAULT_CFG.path };
+  const moved = JSON.stringify(c) !== JSON.stringify(cfg());
+  lsSet('memo.cfg', JSON.stringify(c));
+  DB.settings = { ...DB.settings, token: $('sToken').value.trim(), carry: $('sCarry').checked, updated: now() };
+  $('settings').classList.add('hidden');
+  if (moved) { SHA = null; await pull(); } else scheduleSave();
+  toast('설정을 저장했습니다');
+};
+$('sPwBtn').onclick = async () => {
+  const a = $('sPw1').value, b = $('sPw2').value;
+  if (a.length < 8) return toast('8자 이상 입력하세요');
+  if (a !== b) return toast('비밀번호 확인이 일치하지 않습니다');
+  SALT = crypto.getRandomValues(new Uint8Array(16)); ITER = KDF_ITER;
+  KEY = await deriveKey(a, SALT, ITER);
+  $('sPw1').value = $('sPw2').value = '';
+  await saveNow(); toast('비밀번호를 변경했습니다 · 다른 기기에서도 새 비밀번호 사용');
+};
+$('sExport').onclick = () => {
+  const blob = new Blob([JSON.stringify(DB, (k, v) => k === 'token' ? undefined : v, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `memo-backup-${isoWeek()}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('sSync').onclick = async () => { $('settings').classList.add('hidden'); await pull(); };
+
+/* ───────── 기타 ───────── */
+let toastT;
+function toast(msg) { document.querySelector('.toast')?.remove(); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2800); }
+// 다시 앱으로 돌아오면: 주가 바뀌었으면 마감 처리, 원격 변경 반영
+document.addEventListener('visibilitychange', () => {
+  if (!DB) return;
+  if (document.hidden) { if (dirty) saveNow(); return; }
+  if (isoWeek() !== curWeek && curWeek === shiftWeek(isoWeek(), -1)) curWeek = isoWeek();
+  if (closePastWeeks()) scheduleSave();
+  if (!dirty && !saving) pull();
+});
+window.addEventListener('beforeunload', e => { if (dirty) { saveNow(); e.preventDefault(); } });
+
+if (!window.crypto?.subtle) { $('lockErr').textContent = '이 브라우저는 암호화를 지원하지 않습니다 (https 필요)'; $('unlockBtn').disabled = true; }
+else { prepareLock(); $('pw').focus(); }
+</script>
+</body>
+</html>

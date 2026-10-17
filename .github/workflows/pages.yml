@@ -1,0 +1,20 @@
+# 앱 파일이 바뀌면 GitHub Pages(gh-pages 브랜치)에 배포. vault.json(암호화 메모)은 앱이 main에서 직접 읽으므로 배포 대상 아님
+name: 메모 앱 배포
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["vault.json"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir site && cp index.html manifest.webmanifest *.png site/
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: site
+          publish_branch: gh-pages
