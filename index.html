@@ -108,6 +108,8 @@
   @media (min-width: 760px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
   .item-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .item-row .field { padding: 9px 10px; }
+  #composeDock .sheet { max-height: none; overflow: visible; border-radius: 12px; margin-top: 12px; padding: 16px; }
+  #composeDock #edClose, #composeDock #edDelete { display: none; }
   .fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 10; width: 58px; height: 58px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 30px; box-shadow: 0 6px 20px rgba(59,130,246,.45); }
   .toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--card2); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; z-index: 30; font-size: 14px; max-width: 90vw; }
   pre.copy { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13px; margin: 10px 0 0; }
@@ -154,6 +156,7 @@
   <div class="wrap">
     <div id="obsBanner"></div>
     <section id="thisWeek"></section>
+    <div id="composeDock"></div>
     <div id="thisMemos"></div>
     <h2 class="sec" id="histHead">지난 기록</h2>
     <section id="history"></section>
@@ -446,6 +449,7 @@ async function enterApp() {
   $('lock').classList.add('hidden'); $('app').classList.remove('hidden');
   curWeek = isoWeek();
   if (rollover()) dirty = true;
+  dockComposer();
   render();
   if (!DB.settings.token) toast('설정(⚙)에서 GitHub 토큰을 넣으면 저장소에 동기화됩니다');
 }
@@ -453,6 +457,8 @@ async function enterApp() {
 async function lock() {
   if (dirty) await saveNow();
   KEY = null; DB = null; SHA = null;
+  ['obsBanner', 'thisWeek', 'thisMemos', 'history', 'edItems'].forEach(i => $(i).innerHTML = ''); edMemo = draft = null;
+  $('edTitle').value = $('edTag').value = $('edNote').value = '';
   $('app').classList.add('hidden'); $('editor').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
   $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
@@ -580,7 +586,8 @@ function render() {
       ${t ? `<details class="fold" style="margin-top:12px"><summary class="small"><span class="caret">▶</span> 단계별 정리 보기</summary>${groupsHTML(g)}${weekActions(curWeek)}</details>` : ''}
     </div>`;
   $('thisMemos').innerHTML = mm.length ? [...mm].sort((a, b) => (b.carriedFrom ? 1 : 0) - (a.carriedFrom ? 1 : 0) || (b.created || '').localeCompare(a.created || '')).map(m => memoHTML(m, curWeek)).join('')
-    : `<div class="empty">이번 주 메모가 아직 없습니다<br><br><button class="btn primary" data-act="new">＋ 첫 메모 쓰기</button></div>`;
+    : `<div class="empty">이번 주 메모가 아직 없습니다 · 위 작성란에 첫 메모를 남겨 보세요</div>`;
+  if (docked() && edWeek !== curWeek) { readFields(); dockComposer(edMemo); }
 
   // 지난 기록 (누적, 최신 주가 위)
   const past = Object.keys(DB.weeks).filter(k => k < curWeek && liveMemos(k).length).sort().reverse();
@@ -612,20 +619,33 @@ function summaryText(key) {
 }
 
 /* ───────── 편집기 ───────── */
-let edMemo = null, edWeek = null;
-function openEditor(id, wk = curWeek) {
-  edWeek = wk;
-  const m = id ? liveMemos(wk).find(x => x.id === id) : null;
-  edMemo = m ? JSON.parse(JSON.stringify(m)) : { id: uid(), created: null, title: '', tag: '', items: [{ id: uid(), text: '', status: 'todo' }], note: '' };
-  $('edHead').textContent = m ? `메모 편집 · ${wk}` : `새 메모 · ${wk}`;
-  $('edTitle').value = edMemo.title; $('edTag').value = edMemo.tag; $('edNote').value = edMemo.note;
-  $('edMeta').textContent = m ? `작성 ${fmtDT(m.created)} · 수정 ${fmtDT(m.updated)}` : '';
-  $('edDelete').classList.toggle('hidden', !m);
+let edMemo = null, edWeek = null, draft = null;
+const sheet = $('editor').querySelector('.sheet');
+const docked = () => sheet.parentNode === $('composeDock');
+const blankMemo = () => ({ id: uid(), created: null, title: '', tag: '', items: [{ id: uid(), text: '', status: 'todo' }], note: '' });
+function readFields() { if (edMemo) { edMemo.title = $('edTitle').value; edMemo.tag = $('edTag').value; edMemo.note = $('edNote').value; } }
+function loadEditor(m, wk, isNew) {
+  edWeek = wk; edMemo = m;
+  $('edHead').textContent = isNew ? `✏️ 이번 주 메모 쓰기 · ${wk}` : `메모 편집 · ${wk}`;
+  $('edTitle').value = m.title; $('edTag').value = m.tag; $('edNote').value = m.note;
+  $('edMeta').textContent = isNew ? '' : `작성 ${fmtDT(m.created)} · 수정 ${fmtDT(m.updated)}`;
+  $('edDelete').classList.toggle('hidden', isNew);
+  $('edCancel').textContent = isNew ? '비우기' : '취소';
   const tags = new Set(['업무', '투자', '개인', '아이디어']); for (const w of Object.values(DB.weeks)) for (const x of w.memos) if (x.tag && !x.deleted) tags.add(x.tag);
   $('tagList').innerHTML = [...tags].map(t => `<option value="${esc(t)}">`).join('');
   renderItems();
-  $('editor').classList.remove('hidden');
-  if (!m) setTimeout(() => $('edTitle').focus(), 50);
+}
+/* 이번 주 작성란은 항상 열려 있음 (주가 바뀌면 새 주로) */
+function dockComposer(restore) {
+  $('editor').classList.add('hidden'); $('composeDock').appendChild(sheet);
+  loadEditor(restore || blankMemo(), curWeek, true);
+}
+function openEditor(id, wk = curWeek) {
+  if (!id) { if (!docked()) dockComposer(); $('composeDock').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(() => $('edTitle').focus(), 300); return; }
+  const m = liveMemos(wk).find(x => x.id === id); if (!m) return;
+  if (docked()) { readFields(); draft = edMemo; }      // 쓰던 내용 보관
+  $('editor').appendChild(sheet); $('editor').classList.remove('hidden');
+  loadEditor(JSON.parse(JSON.stringify(m)), wk, false);
 }
 function renderItems() {
   $('edItems').innerHTML = edMemo.items.map((it, i) => `
@@ -635,7 +655,7 @@ function renderItems() {
       <button class="icon-btn" data-ed-del="${i}" type="button" aria-label="항목 삭제">−</button>
     </div>`).join('');
 }
-function closeEditor() { $('editor').classList.add('hidden'); edMemo = null; }
+function closeEditor() { const d = docked() ? null : draft; draft = null; dockComposer(d); }
 $('edItems').addEventListener('input', e => { const i = e.target.dataset.edText; if (i != null) edMemo.items[i].text = e.target.value; });
 $('edItems').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.edText != null && !e.isComposing) { e.preventDefault(); $('edAddItem').click(); } });
 $('edItems').addEventListener('click', e => {
@@ -651,6 +671,7 @@ $('edSave').onclick = () => {
   if (!edMemo.title && !edMemo.items.length && !edMemo.note.trim()) { closeEditor(); return; }
   if (!edMemo.title) edMemo.title = edMemo.items[0]?.text || edMemo.note.trim().split('\n')[0].slice(0, 40);
   const ts = now(); edMemo.updated = ts; edMemo.created = edMemo.created || ts;
+  if (docked()) edWeek = curWeek;
   const list = week(edWeek).memos, i = list.findIndex(x => x.id === edMemo.id);
   i >= 0 ? (list[i] = edMemo) : list.push(edMemo);
   closeEditor(); render(); scheduleSave();
@@ -672,7 +693,6 @@ $('app').addEventListener('click', async e => {
     return;
   }
   const act = el.dataset.act, wk = el.dataset.wk;
-  if (act === 'new') return openEditor();
   if (act === 'obs') return sendObsidian(wk);
   if (act === 'md') return downloadMd(wk);
   if (act === 'dismiss') { week(wk).obsidianSkip = true; scheduleSave(); return render(); }
