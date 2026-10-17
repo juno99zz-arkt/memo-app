@@ -1,14 +1,14 @@
 {
  "name": "나의 메모",
  "short_name": "메모",
- "description": "비밀번호로 잠긴 주간 메모장 · 단계별 정리 · 옵시디언 보관",
+ "description": "한 주에 하나, 비밀번호로 잠긴 메모장",
  "id": "/memo-app/",
  "start_url": "/memo-app/?source=pwa",
  "scope": "/memo-app/",
  "display": "standalone",
  "orientation": "portrait",
- "background_color": "#0f1117",
- "theme_color": "#0f1117",
+ "background_color": "#f7f7f5",
+ "theme_color": "#f7f7f5",
  "lang": "ko",
  "categories": ["productivity"],
  "icons": [
