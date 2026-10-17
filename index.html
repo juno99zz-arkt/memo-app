@@ -24,10 +24,12 @@
   .muted { color: var(--muted); }
   .small { font-size: 12px; }
   .row { display: flex; align-items: center; gap: 8px; }
+  .wrapx { flex-wrap: wrap; }
   .grow { flex: 1; min-width: 0; }
   .hidden { display: none !important; }
-  .btn { padding: 10px 14px; border-radius: 10px; background: var(--card2); border: 1px solid var(--border); font-size: 14px; white-space: nowrap; }
+  .btn { padding: 9px 13px; border-radius: 10px; background: var(--card2); border: 1px solid var(--border); font-size: 13px; white-space: nowrap; }
   .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.obs { background: rgba(168,85,247,.16); border-color: rgba(168,85,247,.45); color: #e9d5ff; }
   .btn.danger { color: var(--red); }
   .btn:disabled { opacity: .5; }
   .icon-btn { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--card2); border: 1px solid var(--border); font-size: 16px; }
@@ -35,6 +37,8 @@
   .field:focus { border-color: var(--blue); }
   textarea.field { resize: vertical; min-height: 96px; line-height: 1.5; }
   label.lbl { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+  h2.sec { font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .02em; margin: 28px 2px 10px; display: flex; align-items: center; gap: 8px; }
+  h2.sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
   /* 잠금 화면 */
   #lock { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -45,12 +49,19 @@
   /* 헤더 */
   header.top { position: sticky; top: 0; z-index: 5; background: rgba(15,17,23,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); padding-top: env(safe-area-inset-top); }
   header.top .in { max-width: 720px; margin: 0 auto; padding: 10px 16px; }
-  .week-title { font-size: 18px; font-weight: 700; }
+  .app-title { font-size: 18px; font-weight: 700; }
   .sync { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--muted); }
   .sync.ok { color: var(--green); } .sync.busy { color: var(--yellow); } .sync.bad { color: var(--red); }
-  .tabs { display: flex; gap: 6px; margin-top: 10px; }
-  .tab { flex: 1; padding: 8px; border-radius: 9px; background: var(--card2); color: var(--muted); font-size: 14px; }
-  .tab.active { background: var(--blue); color: #fff; font-weight: 600; }
+
+  /* 이번 주 */
+  .week-hero { padding: 16px; }
+  .week-hero .wk { font-size: 20px; font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { padding: 8px; text-align: center; border-radius: 10px; background: var(--card2); }
+  .stat b { display: block; font-size: 20px; margin-top: 2px; }
+  .bar { height: 8px; border-radius: 999px; background: var(--card2); overflow: hidden; display: flex; }
+  .bar span { display: block; height: 100%; }
+  .banner { padding: 12px 14px; margin-bottom: 12px; border-color: rgba(168,85,247,.45); background: rgba(168,85,247,.08); }
 
   /* 상태 */
   .chip { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
@@ -58,31 +69,40 @@
   .st-doing { background: rgba(245,158,11,.14); color: #fcd34d; border-color: rgba(245,158,11,.35); }
   .st-done  { background: rgba(34,197,94,.14);  color: #86efac; border-color: rgba(34,197,94,.35); }
   .st-hold  { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.3); }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0; }
-  .stat { padding: 10px; text-align: center; border-radius: 10px; }
-  .stat b { display: block; font-size: 20px; }
-  .bar { height: 8px; border-radius: 999px; background: var(--card2); overflow: hidden; display: flex; }
-  .bar span { display: block; height: 100%; }
 
   /* 메모 카드 */
-  .memo { padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .memo { padding: 14px; margin-top: 10px; cursor: pointer; }
+  .memo.carry { border-color: rgba(245,158,11,.4); }
   .memo h3 { margin: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .memo .items { margin: 10px 0 0; padding: 0; list-style: none; }
   .memo .items li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: 14px; }
   .memo .items li .chip { cursor: pointer; }
   .memo .items li.done-t span.t { color: var(--muted); text-decoration: line-through; }
-  .memo .note { margin-top: 8px; font-size: 13px; color: var(--muted); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(168,85,247,.15); color: #d8b4fe; }
-  .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+  .memo .note { margin-top: 8px; font-size: 13px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(168,85,247,.15); color: #d8b4fe; white-space: nowrap; }
+  .tag.carry { background: rgba(245,158,11,.15); color: #fcd34d; }
+  .empty { text-align: center; padding: 32px 16px; color: var(--muted); }
 
-  /* 주간 정리 */
-  .group { padding: 14px; margin-bottom: 10px; }
-  .group h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  /* 단계별 정리 */
+  .groups { display: grid; gap: 8px; margin-top: 12px; }
+  .group { padding: 10px 12px; border-radius: 10px; background: var(--card2); }
+  .group h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
   .group ul { margin: 0; padding-left: 18px; }
-  .group li { padding: 3px 0; font-size: 14px; }
-  .group li .from { color: var(--muted); font-size: 12px; }
+  .group li { padding: 2px 0; font-size: 13px; }
+  .group li .from { color: var(--muted); font-size: 11px; }
+  details.fold > summary { list-style: none; cursor: pointer; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary .caret { transition: transform .2s; display: inline-block; color: var(--muted); }
+  details.fold[open] > summary .caret { transform: rotate(90deg); }
 
-  /* 편집기 */
+  /* 지난 기록 */
+  .hist { margin-bottom: 10px; }
+  .hist > summary { padding: 14px; }
+  .hist .body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .hist .memo { background: var(--bg); }
+  .rate { font-weight: 700; font-size: 15px; }
+
+  /* 시트 */
   .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
   .sheet { width: 100%; max-width: 720px; max-height: 92vh; overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
   @media (min-width: 760px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
@@ -90,7 +110,8 @@
   .item-row .field { padding: 9px 10px; }
   .fab { position: fixed; right: 18px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 10; width: 58px; height: 58px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 30px; box-shadow: 0 6px 20px rgba(59,130,246,.45); }
   .toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--card2); border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; z-index: 30; font-size: 14px; max-width: 90vw; }
-  pre.copy { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13px; }
+  pre.copy { white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 13px; margin: 10px 0 0; }
+  .guide { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 6px 0 0; padding-left: 18px; }
 </style>
 </head>
 <body>
@@ -113,7 +134,7 @@
         <input class="field" type="password" id="tokenIn" placeholder="github_pat_..." style="margin-top:8px">
         <div class="muted small" style="margin-top:6px">Fine-grained 토큰 · 이 저장소만 · Contents: Read and write.<br>토큰은 메모와 함께 암호화되어 저장됩니다.</div>
       </details>
-      <button class="btn primary" style="width:100%;margin-top:18px" id="unlockBtn">열기</button>
+      <button class="btn primary" style="width:100%;margin-top:18px;padding:12px" id="unlockBtn">열기</button>
       <div class="err" id="lockErr"></div>
     </form>
   </div>
@@ -123,30 +144,19 @@
 <div id="app" class="hidden">
   <header class="top"><div class="in">
     <div class="row">
-      <button class="icon-btn" id="prevWk" aria-label="이전 주">‹</button>
-      <div class="grow" style="text-align:center">
-        <div class="week-title" id="wkTitle"></div>
-        <div class="muted small" id="wkRange"></div>
-      </div>
-      <button class="icon-btn" id="nextWk" aria-label="다음 주">›</button>
-    </div>
-    <div class="row" style="margin-top:8px">
+      <span class="app-title grow">📝 나의 메모</span>
       <span class="sync" id="sync">대기</span>
-      <span class="muted small grow" id="wkBadge"></span>
-      <select class="btn" id="wkSelect" style="padding:6px 8px;font-size:12px" aria-label="주 선택"></select>
       <button class="icon-btn" id="settingsBtn" aria-label="설정">⚙</button>
       <button class="icon-btn" id="lockBtn" aria-label="잠금">🔒</button>
-    </div>
-    <div class="tabs">
-      <button class="tab active" data-tab="memos">메모</button>
-      <button class="tab" data-tab="summary">주간 정리</button>
     </div>
   </div></header>
 
   <div class="wrap">
-    <div class="stats" id="stats"></div>
-    <div id="memosView"></div>
-    <div id="summaryView" class="hidden"></div>
+    <div id="obsBanner"></div>
+    <section id="thisWeek"></section>
+    <div id="thisMemos"></div>
+    <h2 class="sec" id="histHead">지난 기록</h2>
+    <section id="history"></section>
   </div>
   <button class="fab" id="addBtn" aria-label="새 메모">＋</button>
 </div>
@@ -182,15 +192,31 @@
 <div class="sheet-bg hidden" id="settings">
   <div class="sheet">
     <div class="row"><b class="grow">설정</b><button class="icon-btn" data-close="settings" aria-label="닫기">✕</button></div>
-    <label class="lbl">저장소 (owner/repo)</label>
-    <input class="field" id="sRepo">
+
+    <label class="lbl" style="margin-top:18px">📱 스마트폰 앱으로 설치</label>
+    <button class="btn primary hidden" id="installBtn" style="width:100%">홈 화면에 앱 설치</button>
+    <ol class="guide">
+      <li><b>아이폰</b>: Safari로 이 페이지 열기 → 공유 버튼 → <b>홈 화면에 추가</b></li>
+      <li><b>안드로이드</b>: Chrome으로 열기 → ⋮ 메뉴 → <b>앱 설치</b> (또는 홈 화면에 추가)</li>
+      <li>설치하면 주소창 없이 앱처럼 열리고, 오프라인에서도 열립니다</li>
+    </ol>
+
+    <label class="lbl" style="margin-top:22px">🟣 옵시디언 연동</label>
     <div class="row">
-      <div class="grow"><label class="lbl">브랜치</label><input class="field" id="sBranch"></div>
-      <div class="grow"><label class="lbl">파일 경로</label><input class="field" id="sPath"></div>
+      <div class="grow"><input class="field" id="sObsVault" placeholder="볼트 이름 (비우면 마지막 볼트)"></div>
+      <div class="grow"><input class="field" id="sObsFolder" placeholder="폴더 (예: 메모/주간)"></div>
     </div>
-    <label class="lbl">GitHub 토큰 (암호화 저장)</label>
-    <input class="field" type="password" id="sToken" placeholder="github_pat_...">
-    <label class="row small" style="margin-top:14px"><input type="checkbox" id="sCarry"> 주 마감 시 미완료(준비·진행) 항목을 다음 주로 자동 이월</label>
+    <label class="row small" style="margin-top:10px"><input type="checkbox" id="sObsAuto"> 주가 바뀌면 지난주 기록 보내기 알림 표시</label>
+    <div class="muted small" style="margin-top:6px">옵시디언 앱이 설치된 기기에서 「옵시디언으로 보내기」를 누르면 <code>폴더/2026-W42.md</code> 노트가 만들어집니다 (같은 주는 덮어쓰기).</div>
+
+    <label class="lbl" style="margin-top:22px">GitHub 동기화</label>
+    <input class="field" id="sRepo" placeholder="owner/repo">
+    <div class="row" style="margin-top:8px">
+      <div class="grow"><input class="field" id="sBranch" placeholder="브랜치"></div>
+      <div class="grow"><input class="field" id="sPath" placeholder="파일 경로"></div>
+    </div>
+    <input class="field" type="password" id="sToken" placeholder="GitHub 토큰 github_pat_... (암호화 저장)" style="margin-top:8px">
+    <label class="row small" style="margin-top:12px"><input type="checkbox" id="sCarry"> 월요일 05:00에 미완료(준비·진행) 항목을 새 주로 자동 이월</label>
     <div class="row" style="margin-top:16px"><span class="grow"></span><button class="btn primary" id="sSave">설정 저장</button></div>
 
     <label class="lbl" style="margin-top:24px">비밀번호 변경</label>
@@ -199,7 +225,7 @@
     <div class="row" style="margin-top:8px"><span class="grow"></span><button class="btn" id="sPwBtn">비밀번호 변경</button></div>
 
     <label class="lbl" style="margin-top:24px">백업</label>
-    <div class="row"><button class="btn" id="sExport">JSON 내보내기 (복호화본)</button><button class="btn" id="sSync">지금 동기화</button></div>
+    <div class="row wrapx"><button class="btn" id="sExport">JSON 내보내기 (복호화본)</button><button class="btn" id="sSync">지금 동기화</button></div>
   </div>
 </div>
 
@@ -208,9 +234,11 @@
 /* ───────── 설정 기본값 (평문 · 비밀 아님) ───────── */
 const DEFAULT_CFG = { repo: 'juno99zz-arkt/memo-app', branch: 'main', path: 'vault.json' };
 const KDF_ITER = 600000;
+const WEEK_START_HOUR = 5;   // 새 주는 월요일 05:00에 시작
 const ST = { todo: '준비', doing: '진행', done: '완료', hold: '보류' };
 const ST_ORDER = ['todo', 'doing', 'done', 'hold'];
 const ST_COLOR = { todo: 'var(--blue)', doing: 'var(--yellow)', done: 'var(--green)', hold: '#64748b' };
+const ST_EMOJI = { done: '✅', doing: '🔄', todo: '📋', hold: '⏸' };
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -218,33 +246,34 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const now = () => new Date().toISOString();
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
-function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
 function cfg() { try { return { ...DEFAULT_CFG, ...JSON.parse(lsGet('memo.cfg') || '{}') }; } catch { return { ...DEFAULT_CFG }; } }
 
-/* ───────── 주(ISO week, 월요일 시작, 현지 시간) ───────── */
+/* ───────── 주 (ISO 주 번호 · 월요일 05:00 ~ 다음 월요일 05:00, 현지 시간) ───────── */
 function isoWeek(d = new Date()) {
-  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = (t.getDay() + 6) % 7;            // 월=0
-  t.setDate(t.getDate() - day + 3);            // 그 주 목요일
-  const y = t.getFullYear();
-  const jan4 = new Date(y, 0, 4);
+  const s = new Date(d.getTime() - WEEK_START_HOUR * 36e5);   // 월 05:00 이전은 지난주
+  const t = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + 3);       // 그 주 목요일
+  const y = t.getFullYear(), jan4 = new Date(y, 0, 4);
   const w = 1 + Math.round(((t - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
   return `${y}-W${String(w).padStart(2, '0')}`;
 }
-function weekMonday(key) {
-  const [y, w] = key.split('-W').map(Number);
-  const jan4 = new Date(y, 0, 4);
-  const mon = new Date(y, 0, 4 - ((jan4.getDay() + 6) % 7));
+function weekStart(key) {                                     // 그 주 월요일 05:00
+  const [y, w] = key.split('-W').map(Number), jan4 = new Date(y, 0, 4);
+  const mon = new Date(y, 0, 4 - ((jan4.getDay() + 6) % 7), WEEK_START_HOUR);
   mon.setDate(mon.getDate() + (w - 1) * 7);
   return mon;
 }
-function shiftWeek(key, n) { const m = weekMonday(key); m.setDate(m.getDate() + 7 * n); return isoWeek(m); }
-function weekRange(key) {
-  const m = weekMonday(key), s = new Date(m); s.setDate(s.getDate() + 6);
-  const f = d => `${d.getMonth() + 1}/${d.getDate()}`;
-  return `${m.getFullYear()} · ${f(m)}(월) ~ ${f(s)}(일)`;
+function weekEnd(key) { const e = weekStart(key); e.setDate(e.getDate() + 7); return e; }
+function shiftWeek(key, n) { const m = weekStart(key); m.setDate(m.getDate() + 7 * n); return isoWeek(m); }
+const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
+const hm = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function weekRange(key) { const s = weekStart(key), e = weekEnd(key); return `${md(s)}(월) ${hm(s)} ~ ${md(e)}(월) ${hm(e)}`; }
+const fmtDT = iso => { const d = new Date(iso); return `${md(d)} ${hm(d)}`; };
+function untilText(ms) {
+  const h = Math.floor(ms / 36e5), d = Math.floor(h / 24);
+  return d ? `${d}일 ${h % 24}시간 후` : h ? `${h}시간 ${Math.floor(ms / 6e4) % 60}분 후` : `${Math.max(1, Math.floor(ms / 6e4))}분 후`;
 }
-const fmtDT = iso => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
 /* ───────── 암호화 (PBKDF2-SHA256 → AES-256-GCM) ───────── */
 const te = new TextEncoder(), td = new TextDecoder();
@@ -289,10 +318,12 @@ async function ghWrite(token, file, sha, msg) {
 
 /* ───────── 상태 ───────── */
 let KEY = null, SALT = null, ITER = KDF_ITER, SHA = null;
-let DB = null;               // { v, settings:{token,carry,updated}, weeks:{ 'YYYY-Www': { memos:[], closedAt } } }
-let curWeek = isoWeek(), curTab = 'memos', dirty = false, saving = false, saveTimer = null;
+let DB = null;   // { v, settings:{token,carry,obsidian:{vault,folder,auto},updated}, weeks:{ 'YYYY-Www': { memos:[], closedAt, obsidianAt } } }
+let curWeek = isoWeek(), dirty = false, saving = false, saveTimer = null;
+const openHist = new Set();   // 펼쳐 둔 지난 주 (다시 그려도 유지)
 
-function emptyDB() { return { v: 1, settings: { token: '', carry: true, updated: now() }, weeks: {} }; }
+function emptyDB() { return { v: 1, settings: { token: '', carry: true, obsidian: { vault: '', folder: '메모/주간', auto: true }, updated: now() }, weeks: {} }; }
+function obs() { return { vault: '', folder: '메모/주간', auto: true, ...(DB.settings.obsidian || {}) }; }
 function week(key) { return DB.weeks[key] || (DB.weeks[key] = { memos: [] }); }
 function liveMemos(key) { return (DB.weeks[key]?.memos || []).filter(m => !m.deleted); }
 
@@ -305,6 +336,9 @@ function mergeDB(a, b) {
     out.weeks[k] = { memos: [...byId.values()].sort((x, y) => (x.created || '').localeCompare(y.created || '')) };
     const closed = [wa.closedAt, wb.closedAt].filter(Boolean).sort()[0];
     if (closed) out.weeks[k].closedAt = closed;
+    const sent = [wa.obsidianAt, wb.obsidianAt].filter(Boolean).sort().pop();
+    if (sent) out.weeks[k].obsidianAt = sent;
+    if (wa.obsidianSkip || wb.obsidianSkip) out.weeks[k].obsidianSkip = true;
   }
   return out;
 }
@@ -346,8 +380,8 @@ async function pull() {
     SHA = remote.sha;
     const merged = mergeDB(DB, theirs);
     const changed = JSON.stringify(merged) !== JSON.stringify(theirs);
-    DB = merged; await cacheLocal(); render();
-    if (changed && token) scheduleSave(); else setSync('동기화됨 ✓', 'ok');
+    DB = merged; rollover(); await cacheLocal(); render();
+    if ((changed || dirty) && token) scheduleSave(); else setSync('동기화됨 ✓', 'ok');
   } catch (e) { setSync('오프라인', 'bad'); }
 }
 
@@ -392,7 +426,7 @@ $('lockForm').addEventListener('submit', async e => {
     try { data = await openVault(source, KEY); } catch { throw new Error('비밀번호가 틀렸습니다'); }
     if (source === remote?.file) SHA = remote.sha;
     // 원격과 기기 캐시가 둘 다 있으면 합침 (오프라인 중 수정분 보존)
-    if (cachedRaw && source !== null && remote && !remote.missing) {
+    if (cachedRaw && remote && !remote.missing) {
       const local = JSON.parse(cachedRaw);
       if (local.kdf?.salt === source.kdf.salt) {
         const mine = await openVault(local, KEY).catch(() => null);
@@ -400,7 +434,7 @@ $('lockForm').addEventListener('submit', async e => {
       }
     }
     DB = data;
-    if (tokenIn && tokenIn !== DB.settings.token) { DB.settings.token = tokenIn; DB.settings.updated = now(); }
+    if (tokenIn && tokenIn !== DB.settings.token) { DB.settings.token = tokenIn; DB.settings.updated = now(); dirty = true; }
     await enterApp();
     if (!remote || remote.missing) await pull(); else { await cacheLocal(); dirty ? scheduleSave() : setSync('동기화됨 ✓', 'ok'); }
   } catch (ex) { err.textContent = ex.message; }
@@ -411,7 +445,7 @@ async function enterApp() {
   $('pw').value = $('pw2').value = $('tokenIn').value = '';
   $('lock').classList.add('hidden'); $('app').classList.remove('hidden');
   curWeek = isoWeek();
-  if (closePastWeeks()) dirty = true;
+  if (rollover()) dirty = true;
   render();
   if (!DB.settings.token) toast('설정(⚙)에서 GitHub 토큰을 넣으면 저장소에 동기화됩니다');
 }
@@ -428,91 +462,147 @@ async function lock() {
 /* ───────── 주간 마감 · 이월 ───────── */
 function collect(key) {
   const g = { todo: [], doing: [], done: [], hold: [] };
-  for (const m of liveMemos(key)) for (const it of (m.items || [])) if (it.text.trim()) g[it.status || 'todo'].push({ text: it.text.trim(), memo: m.title || '(제목 없음)', tag: m.tag || '', memoId: m.id });
+  for (const m of liveMemos(key)) for (const it of (m.items || [])) if (it.text.trim()) g[it.status || 'todo'].push({ text: it.text.trim(), status: it.status || 'todo', memo: m.title || '(제목 없음)', tag: m.tag || '' });
   return g;
 }
+const totalOf = g => ST_ORDER.reduce((s, k) => s + g[k].length, 0);
+const rateOf = g => { const t = totalOf(g); return t ? Math.round(g.done.length / t * 100) : 0; };
 
-/* 지난 주 중 마감 안 된 주를 마감하고, 설정에 따라 미완료 항목을 다음 주로 이월. 이월 메모 id는 고정이라 여러 기기에서 실행해도 중복되지 않음 */
-function closePastWeeks() {
+/* 월요일 05:00이 지나면: 지난 주를 마감하고 미완료(진행·준비) 항목을 이번 주 맨 위로 옮김.
+   이월 메모 id는 출처 주로 고정이라 여러 기기에서 동시에 실행해도 중복되지 않음 */
+function rollover() {
+  curWeek = isoWeek();
   let changed = false;
   for (const k of Object.keys(DB.weeks).sort()) {
     if (k >= curWeek || DB.weeks[k].closedAt || !liveMemos(k).length) continue;
     DB.weeks[k].closedAt = now(); changed = true;
-    if (DB.settings.carry) changed = carryOver(k) || changed;
+    if (DB.settings.carry !== false) changed = carryOver(k, curWeek) || changed;
   }
   return changed;
 }
-function carryOver(fromKey) {
+function carryOver(fromKey, toKey) {
   const g = collect(fromKey), items = [...g.doing, ...g.todo];
-  if (!items.length) return false;
-  const to = shiftWeek(fromKey, 1), id = `carry-${fromKey}`;
-  if (week(to).memos.some(m => m.id === id)) return false;
-  week(to).memos.unshift({
-    id, created: weekMonday(to).toISOString(), updated: now(), title: `${fromKey} 이월 항목`, tag: '이월',
-    items: items.map(x => ({ id: uid(), text: x.text, status: g.doing.includes(x) ? 'doing' : 'todo' })),
+  const id = `carry-${fromKey}`;
+  if (!items.length || week(toKey).memos.some(m => m.id === id)) return false;
+  week(toKey).memos.unshift({
+    id, created: weekStart(toKey).toISOString(), updated: now(), title: `${fromKey} 이월 항목`, tag: '이월', carriedFrom: fromKey,
+    items: items.map(x => ({ id: uid(), text: x.text, status: x.status })),
     note: `지난주 미완료 ${items.length}건 · 출처: ${[...new Set(items.map(x => x.memo))].join(', ')}`,
   });
   return true;
 }
 
+/* ───────── 옵시디언 ───────── */
+const obsTag = t => '#' + t.trim().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_\-/]/gu, '');
+function weekMarkdown(key) {
+  const g = collect(key), mm = liveMemos(key), s = weekStart(key), e = weekEnd(key), tags = [...new Set(mm.map(m => m.tag).filter(Boolean))];
+  const L = ['---', `week: ${key}`, `period: ${ymd(s)} ${hm(s)} ~ ${ymd(e)} ${hm(e)}`, `completion: ${rateOf(g)}`,
+    `done: ${g.done.length}`, `doing: ${g.doing.length}`, `todo: ${g.todo.length}`, `hold: ${g.hold.length}`,
+    `tags: [주간메모${tags.map(t => ', ' + JSON.stringify(t)).join('')}]`, '---', '',
+    `# ${key} 주간 메모`, '', `> ${weekRange(key)} · 완료율 **${rateOf(g)}%** · 완료 ${g.done.length} · 진행 ${g.doing.length} · 준비 ${g.todo.length} · 보류 ${g.hold.length}`, '',
+    '## 단계별 정리'];
+  for (const k of ['done', 'doing', 'todo', 'hold']) {
+    L.push('', `### ${ST_EMOJI[k]} ${ST[k]} (${g[k].length})`);
+    if (!g[k].length) L.push('- 없음');
+    for (const x of g[k]) L.push(`- [${k === 'done' ? 'x' : ' '}] ${x.text} — *${x.memo}*`);
+  }
+  L.push('', '## 메모');
+  for (const m of mm) {
+    L.push('', `### ${m.title || '(제목 없음)'}${m.tag ? ' ' + obsTag(m.tag) : ''}`, `*${fmtDT(m.created)} 작성${m.updated !== m.created ? ` · ${fmtDT(m.updated)} 수정` : ''}*`, '');
+    for (const it of (m.items || [])) if (it.text.trim()) L.push(`- [${it.status === 'done' ? 'x' : ' '}] **${ST[it.status]}** ${it.text}`);
+    if (m.note?.trim()) L.push('', m.note.trim());
+  }
+  return L.join('\n') + '\n';
+}
+function sendObsidian(key) {
+  const o = obs(), file = `${o.folder.replace(/^\/+|\/+$/g, '')}${o.folder ? '/' : ''}${key}`;
+  const q = [o.vault && `vault=${encodeURIComponent(o.vault)}`, `file=${encodeURIComponent(file)}`, `content=${encodeURIComponent(weekMarkdown(key))}`, 'overwrite=true'].filter(Boolean).join('&');
+  week(key).obsidianAt = now(); scheduleSave(); render();
+  location.href = `obsidian://new?${q}`;
+  toast('옵시디언을 엽니다 · 안 열리면 「.md 저장」을 이용하세요');
+}
+function downloadMd(key) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([weekMarkdown(key)], { type: 'text/markdown' })); a.download = `${key}.md`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
 /* ───────── 렌더링 ───────── */
+function statusBar(g) {
+  const t = totalOf(g);
+  return `<div class="bar">${ST_ORDER.map(k => `<span style="width:${t ? g[k].length / t * 100 : 0}%;background:${ST_COLOR[k]}"></span>`).join('')}</div>`;
+}
+function groupsHTML(g) {
+  return `<div class="groups">${['done', 'doing', 'todo', 'hold'].map(k => `
+    <div class="group"><h4><span class="chip st-${k}">${ST[k]}</span> ${g[k].length}건</h4>
+      ${g[k].length ? `<ul>${g[k].map(x => `<li>${esc(x.text)} <span class="from">· ${esc(x.memo)}</span></li>`).join('')}</ul>` : `<div class="muted small">없음</div>`}
+    </div>`).join('')}</div>`;
+}
+function memoHTML(m, wk) {
+  const items = (m.items || []).filter(i => i.text.trim());
+  return `<div class="memo card${m.carriedFrom ? ' carry' : ''}" data-id="${m.id}" data-wk="${wk}">
+    <div class="row"><h3 class="grow">${esc(m.title || '(제목 없음)')}</h3>${m.tag ? `<span class="tag${m.carriedFrom ? ' carry' : ''}">${esc(m.tag)}</span>` : ''}</div>
+    <div class="muted small" style="margin-top:4px">${fmtDT(m.created)}${m.updated !== m.created ? ` · 수정 ${fmtDT(m.updated)}` : ''}</div>
+    ${items.length ? `<ul class="items">${items.map(i => `
+      <li class="${i.status === 'done' ? 'done-t' : ''}"><span class="chip st-${i.status}" data-cycle="${wk}|${m.id}|${i.id}">${ST[i.status]}</span><span class="t">${esc(i.text)}</span></li>`).join('')}</ul>` : ''}
+    ${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
+  </div>`;
+}
+function weekActions(key) {
+  const w = DB.weeks[key];
+  return `<div class="row wrapx" style="margin-top:12px">
+    <button class="btn obs" data-act="obs" data-wk="${key}">🟣 옵시디언으로 보내기</button>
+    <button class="btn" data-act="md" data-wk="${key}">.md 저장</button>
+    <button class="btn" data-act="copy" data-wk="${key}">요약 복사</button>
+    ${w?.obsidianAt ? `<span class="muted small">옵시디언 전송 ${fmtDT(w.obsidianAt)}</span>` : ''}
+  </div>`;
+}
+
 function render() {
   if (!DB) return;
-  const mm = liveMemos(curWeek), g = collect(curWeek), total = ST_ORDER.reduce((s, k) => s + g[k].length, 0);
-  $('wkTitle').textContent = curWeek === isoWeek() ? `${curWeek} · 이번 주` : curWeek;
-  $('wkRange').textContent = weekRange(curWeek);
-  const w = DB.weeks[curWeek];
-  $('wkBadge').textContent = w?.closedAt ? `🗂 마감됨 ${fmtDT(w.closedAt)}` : (curWeek < isoWeek() ? '' : `메모 ${mm.length}개`);
-  $('stats').innerHTML = ST_ORDER.map(k => `<div class="stat card"><span class="chip st-${k}">${ST[k]}</span><b>${g[k].length}</b></div>`).join('');
+  const mm = liveMemos(curWeek), g = collect(curWeek), t = totalOf(g);
+  const left = weekEnd(curWeek) - new Date();
 
-  // 주 선택 목록: 메모가 있는 주 + 이번 주
-  const keys = [...new Set([...Object.keys(DB.weeks).filter(k => liveMemos(k).length), isoWeek(), curWeek])].sort().reverse();
-  $('wkSelect').innerHTML = keys.map(k => `<option value="${k}" ${k === curWeek ? 'selected' : ''}>${k} (${liveMemos(k).length})</option>`).join('');
+  // 옵시디언 알림: 지난주 기록이 아직 안 보내졌으면
+  const last = shiftWeek(curWeek, -1), lw = DB.weeks[last];
+  $('obsBanner').innerHTML = obs().auto && lw && !lw.obsidianAt && !lw.obsidianSkip && liveMemos(last).length ? `
+    <div class="card banner"><div class="row wrapx"><span class="grow small">🟣 지난주(<b>${last}</b>) 기록이 마감됐어요. 옵시디언에 보관할까요?</span>
+      <button class="btn obs" data-act="obs" data-wk="${last}">보내기</button><button class="btn" data-act="dismiss" data-wk="${last}">나중에</button></div></div>` : '';
 
-  // 메모 목록
-  $('memosView').innerHTML = mm.length ? [...mm].reverse().map(m => `
-    <div class="memo card" data-id="${m.id}">
-      <div class="row"><h3 class="grow">${esc(m.title || '(제목 없음)')}</h3>${m.tag ? `<span class="tag">${esc(m.tag)}</span>` : ''}</div>
-      <div class="muted small" style="margin-top:4px">${fmtDT(m.created)}${m.updated !== m.created ? ` · 수정 ${fmtDT(m.updated)}` : ''}</div>
-      ${(m.items || []).filter(i => i.text.trim()).length ? `<ul class="items">${m.items.filter(i => i.text.trim()).map(i => `
-        <li class="${i.status === 'done' ? 'done-t' : ''}"><span class="chip st-${i.status}" data-cycle="${m.id}|${i.id}">${ST[i.status]}</span><span class="t">${esc(i.text)}</span></li>`).join('')}</ul>` : ''}
-      ${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
-    </div>`).join('') : `<div class="empty">이 주에는 메모가 없습니다<br><br><button class="btn primary" onclick="openEditor()">＋ 첫 메모 쓰기</button></div>`;
-
-  // 주간 정리
-  const pct = k => total ? (g[k].length / total * 100) : 0;
-  const rate = total ? Math.round(g.done.length / total * 100) : 0;
-  const tags = {}; for (const m of mm) if (m.tag) tags[m.tag] = (tags[m.tag] || 0) + 1;
-  $('summaryView').innerHTML = `
-    <div class="card group">
-      <div class="row"><b class="grow">완료율 ${rate}%</b><span class="muted small">항목 ${total}개 · 메모 ${mm.length}개</span></div>
-      <div class="bar" style="margin-top:10px">${ST_ORDER.map(k => `<span style="width:${pct(k)}%;background:${ST_COLOR[k]}"></span>`).join('')}</div>
-      ${Object.keys(tags).length ? `<div class="row" style="margin-top:10px;flex-wrap:wrap">${Object.entries(tags).map(([t, n]) => `<span class="tag">${esc(t)} ${n}</span>`).join('')}</div>` : ''}
-    </div>
-    ${['done', 'doing', 'todo', 'hold'].map(k => `
-      <div class="card group">
-        <h4><span class="chip st-${k}">${ST[k]}</span> ${g[k].length}건</h4>
-        ${g[k].length ? `<ul>${g[k].map(x => `<li>${esc(x.text)} <span class="from">· ${esc(x.memo)}</span></li>`).join('')}</ul>` : `<div class="muted small">없음</div>`}
-      </div>`).join('')}
-    <div class="card group">
-      <h4>📋 공유용 요약</h4>
-      <pre class="copy" id="copyText">${esc(summaryText(curWeek, g, rate))}</pre>
-      <div class="row" style="margin-top:10px;flex-wrap:wrap">
-        <button class="btn" id="copyBtn">복사</button>
-        <span class="grow"></span>
-        ${w?.closedAt ? `<button class="btn" id="reopenBtn">마감 취소</button>` : `<button class="btn" id="closeBtn">이 주 마감</button>`}
-        <button class="btn" id="carryBtn" ${(g.doing.length + g.todo.length) ? '' : 'disabled'}>미완료 → 다음 주 이월</button>
-      </div>
+  // 이번 주 (항상 펼침)
+  $('thisWeek').innerHTML = `
+    <div class="card week-hero">
+      <div class="row"><div class="grow"><div class="wk">${curWeek} · 이번 주</div><div class="muted small" style="margin-top:2px">${weekRange(curWeek)}</div></div>
+        <div style="text-align:right"><div class="rate">${rateOf(g)}%</div><div class="muted small">완료율</div></div></div>
+      <div style="margin-top:12px">${statusBar(g)}</div>
+      <div class="stats">${ST_ORDER.map(k => `<div class="stat"><span class="chip st-${k}">${ST[k]}</span><b>${g[k].length}</b></div>`).join('')}</div>
+      <div class="muted small" style="margin-top:10px">⏰ 주간 마감 · 다음 주 시작: ${md(weekEnd(curWeek))}(월) 05:00 (${untilText(left)}) — 미완료 항목은 자동으로 다음 주에 이어집니다</div>
+      ${t ? `<details class="fold" style="margin-top:12px"><summary class="small"><span class="caret">▶</span> 단계별 정리 보기</summary>${groupsHTML(g)}${weekActions(curWeek)}</details>` : ''}
     </div>`;
-  $('memosView').classList.toggle('hidden', curTab !== 'memos');
-  $('summaryView').classList.toggle('hidden', curTab !== 'summary');
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === curTab));
+  $('thisMemos').innerHTML = mm.length ? [...mm].sort((a, b) => (b.carriedFrom ? 1 : 0) - (a.carriedFrom ? 1 : 0) || (b.created || '').localeCompare(a.created || '')).map(m => memoHTML(m, curWeek)).join('')
+    : `<div class="empty">이번 주 메모가 아직 없습니다<br><br><button class="btn primary" data-act="new">＋ 첫 메모 쓰기</button></div>`;
+
+  // 지난 기록 (누적, 최신 주가 위)
+  const past = Object.keys(DB.weeks).filter(k => k < curWeek && liveMemos(k).length).sort().reverse();
+  $('histHead').textContent = `지난 기록 · ${past.length}주`;
+  $('history').innerHTML = past.length ? past.map(k => {
+    const gk = collect(k), w = DB.weeks[k];
+    return `<details class="fold card hist" data-wk="${k}" ${openHist.has(k) ? 'open' : ''}>
+      <summary><div class="row"><span class="caret">▶</span><div class="grow"><b>${k}</b><div class="muted small">${weekRange(k)}</div></div>
+        <span class="rate">${rateOf(gk)}%</span>${w.obsidianAt ? '<span title="옵시디언 전송됨">🟣</span>' : ''}</div>
+        <div class="row small muted" style="margin:8px 0 6px 22px">완료 ${gk.done.length} · 진행 ${gk.doing.length} · 준비 ${gk.todo.length} · 보류 ${gk.hold.length} · 메모 ${liveMemos(k).length}</div>
+        <div style="margin-left:22px">${statusBar(gk)}</div></summary>
+      <div class="body">${groupsHTML(gk)}${weekActions(k)}
+        <div class="muted small" style="margin-top:16px">메모 ${liveMemos(k).length}개</div>
+        ${[...liveMemos(k)].reverse().map(m => memoHTML(m, k)).join('')}</div>
+    </details>`;
+  }).join('') : `<div class="muted small" style="text-align:center;padding:20px">월요일 05:00이 지나면 이번 주 기록이 여기에 쌓입니다</div>`;
 }
 
 /* 메신저에 붙여넣기 좋게 한 줄 26자 이내로 */
 function clip(s, n = 26) { const a = [...s]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : s; }
-function summaryText(key, g, rate) {
-  const lines = [clip(`[${key} 주간 정리]`), clip(`완료율 ${rate}% · 완료${g.done.length} 진행${g.doing.length} 준비${g.todo.length}`)];
+function summaryText(key) {
+  const g = collect(key), lines = [clip(`[${key} 주간 정리]`), clip(`완료율 ${rateOf(g)}% · 완료${g.done.length} 진행${g.doing.length} 준비${g.todo.length}`)];
   for (const k of ['done', 'doing', 'todo', 'hold']) {
     if (!g[k].length) continue;
     lines.push('', `■ ${ST[k]} ${g[k].length}건`);
@@ -522,11 +612,12 @@ function summaryText(key, g, rate) {
 }
 
 /* ───────── 편집기 ───────── */
-let edMemo = null;
-function openEditor(id) {
-  const m = id ? liveMemos(curWeek).find(x => x.id === id) : null;
+let edMemo = null, edWeek = null;
+function openEditor(id, wk = curWeek) {
+  edWeek = wk;
+  const m = id ? liveMemos(wk).find(x => x.id === id) : null;
   edMemo = m ? JSON.parse(JSON.stringify(m)) : { id: uid(), created: null, title: '', tag: '', items: [{ id: uid(), text: '', status: 'todo' }], note: '' };
-  $('edHead').textContent = m ? '메모 편집' : `새 메모 · ${curWeek}`;
+  $('edHead').textContent = m ? `메모 편집 · ${wk}` : `새 메모 · ${wk}`;
   $('edTitle').value = edMemo.title; $('edTag').value = edMemo.tag; $('edNote').value = edMemo.note;
   $('edMeta').textContent = m ? `작성 ${fmtDT(m.created)} · 수정 ${fmtDT(m.updated)}` : '';
   $('edDelete').classList.toggle('hidden', !m);
@@ -560,39 +651,35 @@ $('edSave').onclick = () => {
   if (!edMemo.title && !edMemo.items.length && !edMemo.note.trim()) { closeEditor(); return; }
   if (!edMemo.title) edMemo.title = edMemo.items[0]?.text || edMemo.note.trim().split('\n')[0].slice(0, 40);
   const ts = now(); edMemo.updated = ts; edMemo.created = edMemo.created || ts;
-  const list = week(curWeek).memos, i = list.findIndex(x => x.id === edMemo.id);
+  const list = week(edWeek).memos, i = list.findIndex(x => x.id === edMemo.id);
   i >= 0 ? (list[i] = edMemo) : list.push(edMemo);
   closeEditor(); render(); scheduleSave();
 };
 $('edDelete').onclick = () => {
   if (!confirm('이 메모를 삭제할까요?')) return;
-  const m = week(curWeek).memos.find(x => x.id === edMemo.id);
+  const m = week(edWeek).memos.find(x => x.id === edMemo.id);
   if (m) { m.deleted = true; m.updated = now(); }
   closeEditor(); render(); scheduleSave();
 };
 
 /* ───────── 화면 이벤트 ───────── */
-$('memosView').addEventListener('click', e => {
-  const cyc = e.target.dataset.cycle;
-  if (cyc) {   // 목록에서 바로 상태 변경
-    e.stopPropagation();
-    const [mid, iid] = cyc.split('|'), m = week(curWeek).memos.find(x => x.id === mid), it = m?.items.find(x => x.id === iid);
+$('app').addEventListener('click', async e => {
+  const el = e.target.closest('[data-cycle],[data-act],.memo');
+  if (!el) return;
+  if (el.dataset.cycle) {   // 목록에서 바로 상태 변경
+    const [wk, mid, iid] = el.dataset.cycle.split('|'), m = week(wk).memos.find(x => x.id === mid), it = m?.items.find(x => x.id === iid);
     if (it) { it.status = ST_ORDER[(ST_ORDER.indexOf(it.status) + 1) % 4]; m.updated = now(); render(); scheduleSave(); }
     return;
   }
-  const card = e.target.closest('.memo'); if (card) openEditor(card.dataset.id);
+  const act = el.dataset.act, wk = el.dataset.wk;
+  if (act === 'new') return openEditor();
+  if (act === 'obs') return sendObsidian(wk);
+  if (act === 'md') return downloadMd(wk);
+  if (act === 'dismiss') { week(wk).obsidianSkip = true; scheduleSave(); return render(); }
+  if (act === 'copy') { try { await navigator.clipboard.writeText(summaryText(wk)); toast('요약을 복사했습니다'); } catch { toast('복사 실패'); } return; }
+  if (el.classList.contains('memo')) openEditor(el.dataset.id, el.dataset.wk);
 });
-$('summaryView').addEventListener('click', async e => {
-  const id = e.target.id;
-  if (id === 'copyBtn') { try { await navigator.clipboard.writeText($('copyText').textContent); toast('복사했습니다'); } catch { toast('복사 실패 · 길게 눌러 선택하세요'); } }
-  if (id === 'closeBtn') { week(curWeek).closedAt = now(); if (DB.settings.carry) carryOver(curWeek); render(); scheduleSave(); toast('이 주를 마감했습니다'); }
-  if (id === 'reopenBtn') { delete week(curWeek).closedAt; render(); scheduleSave(); }
-  if (id === 'carryBtn') { if (carryOver(curWeek)) { render(); scheduleSave(); toast(`${shiftWeek(curWeek, 1)}로 이월했습니다`); } else toast('이미 이월되었습니다'); }
-});
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => { curTab = t.dataset.tab; render(); });
-$('prevWk').onclick = () => { curWeek = shiftWeek(curWeek, -1); render(); };
-$('nextWk').onclick = () => { curWeek = shiftWeek(curWeek, 1); render(); };
-$('wkSelect').onchange = e => { curWeek = e.target.value; render(); };
+$('history').addEventListener('toggle', e => { const wk = e.target.dataset?.wk; if (wk) e.target.open ? openHist.add(wk) : openHist.delete(wk); }, true);
 $('addBtn').onclick = () => openEditor();
 $('lockBtn').onclick = lock;
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dataset.close).classList.add('hidden'));
@@ -600,9 +687,10 @@ document.querySelectorAll('.sheet-bg').forEach(bg => bg.addEventListener('click'
 
 /* ───────── 설정 ───────── */
 $('settingsBtn').onclick = () => {
-  const c = cfg();
+  const c = cfg(), o = obs();
   $('sRepo').value = c.repo; $('sBranch').value = c.branch; $('sPath').value = c.path;
-  $('sToken').value = DB.settings.token || ''; $('sCarry').checked = !!DB.settings.carry;
+  $('sToken').value = DB.settings.token || ''; $('sCarry').checked = DB.settings.carry !== false;
+  $('sObsVault').value = o.vault; $('sObsFolder').value = o.folder; $('sObsAuto').checked = !!o.auto;
   $('sPw1').value = $('sPw2').value = '';
   $('settings').classList.remove('hidden');
 };
@@ -610,8 +698,9 @@ $('sSave').onclick = async () => {
   const c = { repo: $('sRepo').value.trim() || DEFAULT_CFG.repo, branch: $('sBranch').value.trim() || DEFAULT_CFG.branch, path: $('sPath').value.trim() || DEFAULT_CFG.path };
   const moved = JSON.stringify(c) !== JSON.stringify(cfg());
   lsSet('memo.cfg', JSON.stringify(c));
-  DB.settings = { ...DB.settings, token: $('sToken').value.trim(), carry: $('sCarry').checked, updated: now() };
-  $('settings').classList.add('hidden');
+  DB.settings = { ...DB.settings, token: $('sToken').value.trim(), carry: $('sCarry').checked,
+    obsidian: { vault: $('sObsVault').value.trim(), folder: $('sObsFolder').value.trim(), auto: $('sObsAuto').checked }, updated: now() };
+  $('settings').classList.add('hidden'); render();
   if (moved) { SHA = null; await pull(); } else scheduleSave();
   toast('설정을 저장했습니다');
 };
@@ -631,15 +720,23 @@ $('sExport').onclick = () => {
 };
 $('sSync').onclick = async () => { $('settings').classList.add('hidden'); await pull(); };
 
+/* ───────── 앱 설치 (PWA) ───────── */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('installBtn').classList.remove('hidden'); });
+$('installBtn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('installBtn').classList.add('hidden'); };
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+
 /* ───────── 기타 ───────── */
 let toastT;
 function toast(msg) { document.querySelector('.toast')?.remove(); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2800); }
-// 다시 앱으로 돌아오면: 주가 바뀌었으면 마감 처리, 원격 변경 반영
+// 월요일 05:00 경계: 앱을 켜 둔 채 넘어가도 1분 안에 마감·이월
+setInterval(() => { if (!DB) return; if (isoWeek() !== curWeek) { if (rollover()) scheduleSave(); } render(); }, 60000);
+// 다시 앱으로 돌아오면: 주가 바뀌었으면 마감·이월, 원격 변경 반영
 document.addEventListener('visibilitychange', () => {
   if (!DB) return;
   if (document.hidden) { if (dirty) saveNow(); return; }
-  if (isoWeek() !== curWeek && curWeek === shiftWeek(isoWeek(), -1)) curWeek = isoWeek();
-  if (closePastWeeks()) scheduleSave();
+  if (rollover()) scheduleSave();
+  render();
   if (!dirty && !saving) pull();
 });
 window.addEventListener('beforeunload', e => { if (dirty) { saveNow(); e.preventDefault(); } });
