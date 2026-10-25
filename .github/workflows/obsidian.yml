@@ -49,7 +49,8 @@ jobs:
           git config user.name "memo-app"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet && { echo "바뀐 노트 없음"; exit 0; }
+          # 바뀐 노트가 없어도 토큰 쓰기 권한은 확인 (만료되면 이 단계가 실패)
+          git diff --cached --quiet && { echo "바뀐 노트 없음"; git push --dry-run; exit 0; }
           git commit -m "주간 메모장 보관: $(date +%F)"
           git pull --rebase   # 옵시디언 Git 플러그인이 그사이 올린 백업과 합침
           git push
