@@ -1,0 +1,55 @@
+# 매주 월요일 05:00(KST) 지난 주 메모장을 옵시디언 저장소(비공개)에 .md 노트로 보관
+# 필요한 설정 (memo-app → Settings → Secrets and variables → Actions):
+#   Secrets  MEMO_PASSWORD   앱 비밀번호 (앱에서 비밀번호를 바꾸면 여기도 바꿔야 함)
+#            OBSIDIAN_TOKEN  옵시디언 저장소에 쓸 수 있는 토큰 (Contents: Read and write)
+#   Variables OBSIDIAN_REPO  옵시디언 저장소 (기본 juno99zz-arkt/obsidian-vault)
+#             OBSIDIAN_FOLDER 노트 폴더 (비우면 앱 설정의 폴더, 기본 2. Area of Responsibility/주간 메모)
+name: 옵시디언 자동 보관
+on:
+  schedule:
+    - cron: "0 20 * * 0"   # 일 20:00 UTC = 월 05:00 KST
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: obsidian-export
+  cancel-in-progress: false
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Seoul
+      OBSIDIAN_REPO: ${{ vars.OBSIDIAN_REPO || 'juno99zz-arkt/obsidian-vault' }}
+    steps:
+      - name: 설정 확인
+        env:
+          HAS_PW: ${{ secrets.MEMO_PASSWORD != '' }}
+          HAS_TOKEN: ${{ secrets.OBSIDIAN_TOKEN != '' }}
+        run: |
+          [ "$HAS_PW" = "true" ] || { echo "::error::MEMO_PASSWORD 시크릿을 등록하세요"; exit 1; }
+          [ "$HAS_TOKEN" = "true" ] || { echo "::error::OBSIDIAN_TOKEN 시크릿을 등록하세요"; exit 1; }
+      - uses: actions/checkout@v4
+      - name: 옵시디언 저장소 가져오기
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.OBSIDIAN_REPO }}
+          token: ${{ secrets.OBSIDIAN_TOKEN }}
+          path: obsidian
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 지난 주 메모장 → 노트
+        env:
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+          OBSIDIAN_FOLDER: ${{ vars.OBSIDIAN_FOLDER }}
+        run: node scripts/export-obsidian.mjs vault.json obsidian
+      - name: 옵시디언 저장소에 커밋
+        working-directory: obsidian
+        run: |
+          git config user.name "memo-app"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "바뀐 노트 없음"; exit 0; }
+          git commit -m "주간 메모장 보관: $(date +%F)"
+          git pull --rebase   # 옵시디언 Git 플러그인이 그사이 올린 백업과 합침
+          git push
