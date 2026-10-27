@@ -75,6 +75,9 @@
   @media (min-width: 720px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
   #pastNote { display: block; width: 100%; min-height: 40vh; resize: none; border: 0; outline: none; background: transparent; padding: 18px; font-size: 15px; line-height: 1.75; }
   .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 30; font-size: 13px; max-width: 90vw; }
+  .gbtn { width: 100%; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .gbtn:hover { background: var(--soft); }
+  .linkbtn { color: var(--muted); font-size: 12px; text-decoration: underline; padding: 4px; }
   .guide { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 6px 0 0; padding-left: 18px; }
   code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 </style>
@@ -86,6 +89,11 @@
   <div class="box">
     <h1>🔒 나의 메모</h1>
     <div class="muted small" id="lockSub">비밀번호를 입력하세요</div>
+    <div id="gBox" class="hidden" style="margin-top:20px">
+      <button class="gbtn" id="gBtn" type="button"><b style="color:#4285f4;font-size:18px">G</b> Google로 로그인</button>
+      <div style="text-align:center;margin-top:10px"><button class="linkbtn" id="pwToggle" type="button">비밀번호로 열기</button></div>
+      <div class="err" id="gErr"></div>
+    </div>
     <form id="lockForm" autocomplete="off">
       <label class="lbl">비밀번호</label>
       <input class="field" type="password" id="pw" autocomplete="current-password" required>
@@ -98,6 +106,11 @@
         <summary class="muted small">GitHub 토큰 (처음 한 번 · 저장에 필요)</summary>
         <input class="field" type="password" id="tokenIn" placeholder="github_pat_..." style="margin-top:8px">
         <div class="muted small" style="margin-top:6px">Fine-grained 토큰 · 이 저장소만 · Contents: Read and write.<br>토큰은 메모와 함께 암호화되어 저장됩니다.</div>
+      </details>
+      <details id="gCfgBox" style="margin-top:10px">
+        <summary class="muted small">Google 로그인 설정 (클라이언트 ID)</summary>
+        <input class="field" id="gClientIn" placeholder="123456-abc.apps.googleusercontent.com" style="margin-top:8px">
+        <div class="muted small" style="margin-top:6px">한 번만 입력하면 됩니다. 비밀번호로 연 뒤 설정에서 Google 계정에 연결하세요.</div>
       </details>
       <button class="btn primary" style="width:100%;margin-top:18px;padding:12px" id="unlockBtn">열기</button>
       <div class="err" id="lockErr"></div>
@@ -187,6 +200,12 @@
     <label class="row small" style="margin-top:12px"><input type="checkbox" id="sCarry"> 월요일 05:00에 준비·진행 줄을 새 메모장으로 자동 이월</label>
     <div class="row" style="margin-top:14px"><span class="grow"></span><button class="btn primary" id="sSave">설정 저장</button></div>
 
+    <label class="lbl" style="margin-top:24px">Google 로그인</label>
+    <div class="muted small" id="gStatus"></div>
+    <input class="field" id="sGid" placeholder="Google 클라이언트 ID" style="margin-top:8px">
+    <div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn primary" id="gLink">Google 계정에 연결</button><button class="btn" id="gUnlink">연결 해제</button></div>
+    <div class="muted small" style="margin-top:6px">연결하면 메모 열쇠가 내 Google 드라이브의 숨김 앱 폴더에 저장되어, 비밀번호 없이 Google 계정으로 열 수 있습니다. 비밀번호는 복구용·옵시디언 자동 보관용으로 계속 필요합니다.</div>
+
     <label class="lbl" style="margin-top:24px">비밀번호 변경</label>
     <input class="field" type="password" id="sPw1" placeholder="새 비밀번호" autocomplete="new-password">
     <input class="field" type="password" id="sPw2" placeholder="새 비밀번호 확인" style="margin-top:8px" autocomplete="new-password">
@@ -200,7 +219,7 @@
 <script>
 'use strict';
 /* ───────── 설정 기본값 (평문 · 비밀 아님) ───────── */
-const DEFAULT_CFG = { repo: 'juno99zz-arkt/memo-app', branch: 'main', path: 'vault.json' };
+const DEFAULT_CFG = { repo: 'juno99zz-arkt/memo-app', branch: 'main', path: 'vault.json', googleClientId: '' };   // 클라이언트 ID는 공개값(비밀 아님)
 const KDF_ITER = 600000;
 const WEEK_START_HOUR = 5;   // 새 메모장은 월요일 05:00에 열림
 const ST = { todo: '준비', doing: '진행', done: '완료', hold: '보류' };
@@ -212,6 +231,7 @@ const now = () => new Date().toISOString();
 const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+function lsDel(k) { try { localStorage.removeItem(k); } catch {} }
 function cfg() { try { return { ...DEFAULT_CFG, ...JSON.parse(lsGet('memo.cfg') || '{}') }; } catch { return { ...DEFAULT_CFG }; } }
 
 /* ───────── 주 (ISO 주 번호 · 월요일 05:00 ~ 다음 월요일 05:00, 현지 시간) ───────── */
@@ -242,7 +262,7 @@ function b64(buf) { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i
 function unb64(s) { const b = atob(s), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
 async function deriveKey(pw, salt, iter) {
   const base = await crypto.subtle.importKey('raw', te.encode(pw), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, base, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
 }
 async function sealVault(data, key, salt, iter) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -376,10 +396,18 @@ async function pull() {
 
 /* ───────── 잠금 해제 ───────── */
 let remoteAtLock = null;     // 잠금 화면에서 미리 읽어둔 원격 파일
+let lockHasVault = !!lsGet('memo.cache'), pwMode = false;
+function applyLockMode() {
+  const g = !!cfg().googleClientId && lockHasVault;
+  $('gBox').classList.toggle('hidden', !g);
+  $('lockForm').classList.toggle('hidden', g && !pwMode);
+  if (g) { $('lockSub').textContent = 'Google 계정으로 열 수 있어요'; loadGsi().catch(() => {}); }
+}
 async function prepareLock() {
   const cached = lsGet('memo.cache');
   try { remoteAtLock = await ghRead(null); } catch { remoteAtLock = null; }
   const hasVault = cached || (remoteAtLock && !remoteAtLock.missing);
+  lockHasVault = !!hasVault;
   if (!hasVault && remoteAtLock?.missing) {
     $('lockSub').textContent = '처음 사용 · 새 비밀번호를 정하세요';
     $('newOnly').classList.remove('hidden'); $('pw2').required = true; $('unlockBtn').textContent = '메모장 만들기';
@@ -388,17 +416,42 @@ async function prepareLock() {
     $('lockSub').textContent = '저장소를 읽지 못했습니다 · 비공개 저장소면 토큰을 입력하세요';
     $('tokenBox').open = true;
   }
+  applyLockMode();
+}
+/* 열 메모 파일 고르기: 원격 우선, 없으면 기기 캐시 */
+async function pickSource(tokenIn) {
+  let remote = remoteAtLock;
+  try { remote = await ghRead(tokenIn || null); remoteAtLock = remote; } catch { /* 오프라인이면 잠금 화면에서 미리 읽어둔 것 */ }   // 다른 기기에서 비밀번호를 바꿨을 수 있으니 열 때마다 최신으로
+  const cachedRaw = lsGet('memo.cache');
+  const source = (remote && !remote.missing) ? remote.file : (cachedRaw ? JSON.parse(cachedRaw) : null);
+  return { remote, cachedRaw, source };
+}
+/* KEY/SALT/ITER가 정해진 뒤 공통으로: 복호화 → 기기 캐시와 합치기 → 앱 진입 */
+async function unlockWith({ remote, cachedRaw, source }, tokenIn, wrongMsg) {
+  let data;
+  try { data = await openVault(source, KEY); } catch { KEY = null; throw new Error(wrongMsg); }
+  if (source === remote?.file) SHA = remote.sha;
+  const before = JSON.stringify(data);
+  migrateDB(data);
+  // 원격과 기기 캐시가 둘 다 있으면 합침 (오프라인 중 수정분 보존)
+  if (cachedRaw && remote && !remote.missing) {
+    const local = JSON.parse(cachedRaw);
+    if (local.kdf?.salt === source.kdf.salt) { const mine = await openVault(local, KEY).catch(() => null); if (mine) data = mergeDB(mine, data); }
+  }
+  if (JSON.stringify(data) !== before) dirty = true;
+  DB = data;
+  if (tokenIn && tokenIn !== DB.settings.token) { DB.settings.token = tokenIn; DB.settings.updated = now(); dirty = true; }
+  await enterApp();
+  if (!remote || remote.missing) await pull(); else { await cacheLocal(); dirty ? scheduleSave() : setSync('동기화됨', 'ok'); }
 }
 
 $('lockForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const pw = $('pw').value, tokenIn = $('tokenIn').value.trim(), err = $('lockErr');
+  const pw = $('pw').value, tokenIn = $('tokenIn').value.trim(), gIn = $('gClientIn').value.trim(), err = $('lockErr');
   err.textContent = ''; $('unlockBtn').disabled = true; $('unlockBtn').textContent = '여는 중…';
   try {
-    let remote = remoteAtLock;
-    if (tokenIn && (!remote || remote.missing)) remote = await ghRead(tokenIn).catch(() => remote);
-    const cachedRaw = lsGet('memo.cache');
-    const source = (remote && !remote.missing) ? remote.file : (cachedRaw ? JSON.parse(cachedRaw) : null);
+    if (gIn) lsSet('memo.cfg', JSON.stringify({ ...cfg(), googleClientId: gIn }));
+    const picked = await pickSource(tokenIn), { source } = picked;
     if (!source) {
       if (!$('pw2').required) { $('newOnly').classList.remove('hidden'); $('pw2').required = true; throw new Error('메모장이 없습니다. 새 비밀번호를 확인 입력하면 새로 만듭니다.'); }
       if (pw.length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다');
@@ -411,24 +464,103 @@ $('lockForm').addEventListener('submit', async e => {
     }
     SALT = unb64(source.kdf.salt); ITER = source.kdf.iter;
     KEY = await deriveKey(pw, SALT, ITER);
-    let data;
-    try { data = await openVault(source, KEY); } catch { throw new Error('비밀번호가 틀렸습니다'); }
-    if (source === remote?.file) SHA = remote.sha;
-    const before = JSON.stringify(data);
-    migrateDB(data);
-    // 원격과 기기 캐시가 둘 다 있으면 합침 (오프라인 중 수정분 보존)
-    if (cachedRaw && remote && !remote.missing) {
-      const local = JSON.parse(cachedRaw);
-      if (local.kdf?.salt === source.kdf.salt) { const mine = await openVault(local, KEY).catch(() => null); if (mine) data = mergeDB(mine, data); }
-    }
-    if (JSON.stringify(data) !== before) dirty = true;
-    DB = data;
-    if (tokenIn && tokenIn !== DB.settings.token) { DB.settings.token = tokenIn; DB.settings.updated = now(); dirty = true; }
-    await enterApp();
-    if (!remote || remote.missing) await pull(); else { await cacheLocal(); dirty ? scheduleSave() : setSync('동기화됨', 'ok'); }
+    await unlockWith(picked, tokenIn, '비밀번호가 틀렸습니다');
   } catch (ex) { err.textContent = ex.message; }
   finally { $('unlockBtn').disabled = false; if ($('unlockBtn').textContent === '여는 중…') $('unlockBtn').textContent = '열기'; }
 });
+
+/* ───────── Google 로그인 ─────────
+   메모를 푸는 열쇠(비밀번호에서 만든 AES 키)를 내 Google 드라이브 '숨김 앱 폴더'에 넣어 두고,
+   Google 로그인이 되면 그 열쇠를 꺼내 메모를 연다. 그 폴더는 이 앱 + 내 Google 계정만 읽을 수 있다. */
+const G_SCOPE = 'openid email https://www.googleapis.com/auth/drive.appdata', G_KEYFILE = 'memo-key.json';
+let gsiLoad = null;
+function loadGsi() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  return gsiLoad || (gsiLoad = new Promise((ok, no) => {
+    const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+    sc.onload = ok; sc.onerror = () => { gsiLoad = null; no(new Error('Google 로그인 스크립트를 불러오지 못했습니다 (인터넷 확인)')); };
+    document.head.appendChild(sc);
+  }));
+}
+function googleToken() {   // 사용자가 누른 직후에 호출해야 팝업이 막히지 않음
+  return new Promise((ok, no) => {
+    const id = cfg().googleClientId;
+    if (!id) return no(new Error('Google 클라이언트 ID가 필요합니다'));
+    if (!window.google?.accounts?.oauth2) return no(new Error('Google 스크립트를 아직 불러오는 중입니다. 잠시 후 다시 눌러 주세요'));
+    google.accounts.oauth2.initTokenClient({
+      client_id: id, scope: G_SCOPE,
+      callback: r => r.access_token ? ok(r.access_token) : no(new Error(r.error_description || r.error || 'Google 로그인 실패')),
+      error_callback: e => no(new Error(e?.type === 'popup_closed' ? '로그인 창이 닫혔습니다' : e?.type === 'popup_failed_to_open' ? '팝업이 막혔습니다. 팝업을 허용하거나 브라우저(Safari/Chrome)에서 열어 주세요' : `Google 로그인 실패 (${e?.type || '알 수 없음'})`)),
+    }).requestAccessToken({ prompt: '' });
+  });
+}
+const gAuth = t => ({ Authorization: `Bearer ${t}` });
+async function gFetch(t, url, opt = {}) {
+  const r = await fetch(url, { ...opt, headers: { ...gAuth(t), ...(opt.headers || {}) } });
+  if (!r.ok) throw new Error(`Google 드라이브 오류 (${r.status})${r.status === 403 ? ' · 앱 폴더 권한을 허용했는지 확인' : ''}`);
+  return r;
+}
+async function googleEmail(t) { try { return (await (await gFetch(t, 'https://www.googleapis.com/oauth2/v3/userinfo')).json()).email || ''; } catch { return ''; } }
+async function driveFindKey(t) {
+  const q = encodeURIComponent(`name='${G_KEYFILE}'`);
+  return (await (await gFetch(t, `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`)).json()).files?.[0]?.id || null;
+}
+async function driveReadKey(t, id) { return (await gFetch(t, `https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json(); }
+async function driveSaveKey(t) {
+  const body = JSON.stringify({ v: 1, salt: b64(SALT), iter: ITER, key: b64(await crypto.subtle.exportKey('raw', KEY)) });
+  const id = await driveFindKey(t);
+  if (id) return gFetch(t, `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
+  const bd = 'memo' + uid();
+  return gFetch(t, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${bd}` },
+    body: `--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: G_KEYFILE, parents: ['appDataFolder'] })}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${bd}--` });
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+async function googleLogin() {
+  const err = $('gErr'); err.textContent = ''; $('gBtn').disabled = true;
+  try {
+    const tk = await googleToken();
+    const picked = await pickSource(''), { source } = picked;
+    if (!source) throw new Error('메모장이 없습니다. 처음에는 비밀번호로 만들어 주세요.');
+    const id = await driveFindKey(tk);
+    if (!id) throw new Error('이 Google 계정에 연결된 메모 열쇠가 없습니다.\n비밀번호로 한 번 열고 설정 → Google 로그인에서 연결해 주세요.');
+    const k = await driveReadKey(tk, id);
+    if (k.salt !== source.kdf.salt) throw new Error('저장된 Google 열쇠가 현재 메모와 맞지 않습니다 (다른 기기에서 비밀번호를 바꿨을 수 있어요).\n비밀번호로 열고 설정에서 Google 연결을 갱신해 주세요.');
+    SALT = unb64(source.kdf.salt); ITER = source.kdf.iter;
+    KEY = await crypto.subtle.importKey('raw', unb64(k.key), 'AES-GCM', true, ['encrypt', 'decrypt']);
+    await unlockWith(picked, '', 'Google 열쇠로 열 수 없습니다. 비밀번호로 열고 연결을 갱신해 주세요.');
+    lsSet('memo.gLinked', '1');
+    googleEmail(tk).then(m => m && lsSet('memo.gEmail', m));
+  } catch (ex) { err.textContent = ex.message; }
+  finally { $('gBtn').disabled = false; }
+}
+$('gBtn').onclick = googleLogin;
+$('pwToggle').onclick = () => { pwMode = true; applyLockMode(); setTimeout(() => $('pw').focus(), 50); };
+
+function refreshGStatus() {
+  const id = $('sGid').value.trim() || cfg().googleClientId, linked = lsGet('memo.gLinked') === '1', m = lsGet('memo.gEmail');
+  $('gStatus').textContent = !id ? '클라이언트 ID를 입력하면 Google 로그인을 쓸 수 있습니다.' : linked ? `연결됨${m ? ' · ' + m : ''} — 다음부터 Google로 로그인할 수 있어요.` : '아직 연결되지 않았습니다. 아래 버튼을 눌러 Google 계정을 연결하세요.';
+  $('gUnlink').classList.toggle('hidden', !linked);
+}
+$('gLink').onclick = async () => {
+  const gid = $('sGid').value.trim();
+  if (gid) lsSet('memo.cfg', JSON.stringify({ ...cfg(), googleClientId: gid }));
+  try {
+    await loadGsi();
+    const tk = await googleToken();
+    await driveSaveKey(tk);
+    lsSet('memo.gLinked', '1'); const m = await googleEmail(tk); if (m) lsSet('memo.gEmail', m);
+    refreshGStatus(); toast('Google 계정에 연결했습니다 · 다음부터 Google로 로그인');
+  } catch (e) { toast(e.message); }
+};
+$('gUnlink').onclick = async () => {
+  if (!confirm('Google 연결을 해제할까요? 해제 후에는 비밀번호로만 열 수 있습니다.')) return;
+  try {
+    const tk = await googleToken(), id = await driveFindKey(tk);
+    if (id) await gFetch(tk, `https://www.googleapis.com/drive/v3/files/${id}`, { method: 'DELETE' });
+    lsDel('memo.gLinked'); lsDel('memo.gEmail'); refreshGStatus(); toast('Google 연결을 해제했습니다');
+  } catch (e) { toast(e.message); }
+};
 
 async function enterApp() {
   $('pw').value = $('pw2').value = $('tokenIn').value = '';
@@ -445,6 +577,7 @@ async function lock() {
   $('app').classList.add('hidden'); $('viewer').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
   $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
+  pwMode = false; lockHasVault = !!lsGet('memo.cache'); applyLockMode();
   prepareLock(); setTimeout(() => $('pw').focus(), 50);
 }
 
@@ -565,12 +698,13 @@ $('settingsBtn').onclick = () => {
   $('sRepo').value = c.repo; $('sBranch').value = c.branch; $('sPath').value = c.path;
   $('sToken').value = DB.settings.token || ''; $('sCarry').checked = DB.settings.carry !== false;
   $('sObsVault').value = o.vault; $('sObsFolder').value = o.folder;
-  $('sPw1').value = $('sPw2').value = '';
+  $('sPw1').value = $('sPw2').value = ''; $('sGid').value = c.googleClientId || '';
+  refreshGStatus(); if (c.googleClientId) loadGsi().catch(() => {});
   $('settings').classList.remove('hidden');
 };
 $('sSave').onclick = async () => {
-  const c = { repo: $('sRepo').value.trim() || DEFAULT_CFG.repo, branch: $('sBranch').value.trim() || DEFAULT_CFG.branch, path: $('sPath').value.trim() || DEFAULT_CFG.path };
-  const moved = JSON.stringify(c) !== JSON.stringify(cfg());
+  const c = { repo: $('sRepo').value.trim() || DEFAULT_CFG.repo, branch: $('sBranch').value.trim() || DEFAULT_CFG.branch, path: $('sPath').value.trim() || DEFAULT_CFG.path, googleClientId: $('sGid').value.trim() };
+  const moved = ['repo', 'branch', 'path'].some(k => c[k] !== cfg()[k]);
   lsSet('memo.cfg', JSON.stringify(c));
   DB.settings = { ...DB.settings, token: $('sToken').value.trim(), carry: $('sCarry').checked,
     obsidian: { vault: $('sObsVault').value.trim(), folder: $('sObsFolder').value.trim() }, updated: now() };
@@ -582,10 +716,14 @@ $('sPwBtn').onclick = async () => {
   const a = $('sPw1').value, b = $('sPw2').value;
   if (a.length < 8) return toast('8자 이상 입력하세요');
   if (a !== b) return toast('비밀번호 확인이 일치하지 않습니다');
+  const tkP = lsGet('memo.gLinked') === '1' ? googleToken().catch(() => null) : null;   // Google 연결돼 있으면 열쇠도 함께 갱신
   SALT = crypto.getRandomValues(new Uint8Array(16)); ITER = KDF_ITER;
   KEY = await deriveKey(a, SALT, ITER);
   $('sPw1').value = $('sPw2').value = '';
-  await saveNow(); toast('비밀번호를 변경했습니다 · 다른 기기에서도 새 비밀번호 사용');
+  await saveNow();
+  const tk = await tkP;
+  if (tkP && tk) { try { await driveSaveKey(tk); toast('비밀번호와 Google 연결을 함께 바꿨습니다'); } catch (e) { toast('비밀번호는 바꿨지만 Google 연결 갱신 실패: 설정에서 다시 연결해 주세요'); } }
+  else toast(tkP ? '비밀번호를 바꿨습니다 · Google 연결은 설정에서 다시 연결해 주세요' : '비밀번호를 변경했습니다 · 다른 기기에서도 새 비밀번호 사용');
 };
 $('sExport').onclick = () => {
   const blob = new Blob([JSON.stringify(DB, (k, v) => k === 'token' ? undefined : v, 2)], { type: 'application/json' });
@@ -617,6 +755,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('beforeunload', e => { if (dirty) { saveNow(); e.preventDefault(); } });
 
+applyLockMode();
 if (!window.crypto?.subtle) { $('lockErr').textContent = '이 브라우저는 암호화를 지원하지 않습니다 (https 필요)'; $('unlockBtn').disabled = true; }
 else { prepareLock(); $('pw').focus(); }
 </script>
