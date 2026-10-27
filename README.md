@@ -7,6 +7,7 @@
 - **월요일 05:00**: 새 메모장이 열리고, 지난주의 준비·진행 줄이 새 메모장 맨 위로 이월
 - **지난 메모장**: 아래 목록에서 열어 보기·수정, 옵시디언으로 보내기(`obsidian://`) / .md 저장 / 요약 복사(한 줄 26자 이내)
 - **옵시디언 자동 보관**: 매주 월요일 05:00(KST) Actions가 지난 메모장들을 `.md` 노트로 만들어 비공개 옵시디언 저장소에 커밋 → 옵시디언의 Obsidian Git 플러그인이 받아옴 (아래 설정 참고)
+- **Google 로그인**: 메모를 푸는 열쇠를 내 Google 드라이브의 숨김 앱 폴더(`appDataFolder`)에 보관하고, Google 로그인으로 꺼내 연다. 비밀번호는 복구용·옵시디언 자동 보관용으로 유지 (아래 설정 참고)
 - **스마트폰 앱**: PWA — 아이폰 Safari 공유→홈 화면에 추가 / 안드로이드 Chrome ⋮→앱 설치
 - **보안**: 브라우저에서 PBKDF2(60만 회)+AES-256-GCM 암호화 후 `vault.json`(main)에 저장 — 저장소에는 암호문만 올라감. 비밀번호를 잊으면 복구 불가.
 - **처음 설정**: GitHub → Settings → Developer settings → Fine-grained token → 이 저장소만, Contents: Read and write → 첫 화면의 토큰 칸에 입력 (토큰도 암호화되어 저장, 다른 기기에서는 비밀번호만 입력)
@@ -29,3 +30,13 @@
 
 노트 폴더는 앱 설정의 옵시디언 폴더(기본 `2. Area of Responsibility/주간 메모`)를 따름. 이미 보관된 주도 앱에서 고치면 다음 실행 때 갱신됨.
 비밀번호는 GitHub 시크릿(암호화 보관)에 맡겨지고, 풀린 노트는 비공개 저장소에만 올라감.
+
+## Google 로그인 설정 (한 번만)
+1. https://console.cloud.google.com → 새 프로젝트
+2. API 및 서비스 → 라이브러리 → **Google Drive API** 사용 설정
+3. OAuth 동의 화면(Google Auth Platform): 외부 → 앱 이름·이메일 입력 → 범위에 `drive.appdata`(+ `openid`, `email`) 추가 → 테스트 사용자에 본인 Gmail 추가 (`drive.appdata`는 민감하지 않은 범위라 **앱 게시**해도 심사 없음)
+4. 사용자 인증 정보 → OAuth 클라이언트 ID → **웹 애플리케이션** → 승인된 자바스크립트 원본: `https://juno99zz-arkt.github.io`
+5. 클라이언트 ID(`…apps.googleusercontent.com`, 공개값)를 `index.html`의 `DEFAULT_CFG.googleClientId`에 넣거나 앱 잠금 화면의 「Google 로그인 설정」에 입력
+6. 비밀번호로 열고 → ⚙ 설정 → **Google 계정에 연결**
+
+동작: 열쇠(비밀번호+salt로 만든 AES 키)를 Drive 앱 폴더 `memo-key.json`에 저장. 비밀번호를 바꾸면 열쇠도 함께 갱신. 연결 해제 시 그 파일 삭제.
