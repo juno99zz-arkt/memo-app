@@ -1,0 +1,62 @@
+# NOJI캘린더 → 구글 캘린더 매일 동기화 (+ 바뀐 일정은 옵시디언 Inbox_Squedule에 메타데이터 기록)
+# 필요한 설정 (memo-app → Settings → Secrets and variables → Actions → Secrets):
+#   NOJI_CLIENT_ID / NOJI_CLIENT_SECRET  chaenggim-calendar 구글 클라우드 프로젝트의 OAuth 클라이언트
+#   NOJI_REFRESH_TOKEN                   내 구글 계정 리프레시 토큰 (범위: calendar.events, datastore)
+#   OBSIDIAN_TOKEN                       (이미 있음) 옵시디언 저장소 쓰기
+name: NOJI 캘린더 동기화
+on:
+  schedule:
+    - cron: "37 19 * * *"   # 19:37 UTC = 매일 04:37 KST (GitHub 예약은 늦어질 수 있어 이른 시각, 정각 피함)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "미리보기만 (캘린더·옵시디언을 바꾸지 않음)"
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: noji-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Seoul
+      OBSIDIAN_REPO: ${{ vars.OBSIDIAN_REPO || 'juno99zz-arkt/obsidian-vault' }}
+    steps:
+      - name: 설정 확인
+        env:
+          OK: ${{ secrets.NOJI_CLIENT_ID != '' && secrets.NOJI_CLIENT_SECRET != '' && secrets.NOJI_REFRESH_TOKEN != '' && secrets.OBSIDIAN_TOKEN != '' }}
+        run: '[ "$OK" = "true" ] || { echo "::error::NOJI_CLIENT_ID · NOJI_CLIENT_SECRET · NOJI_REFRESH_TOKEN · OBSIDIAN_TOKEN 시크릿을 등록하세요"; exit 1; }'
+      - uses: actions/checkout@v4
+      - name: 옵시디언 저장소 가져오기
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.OBSIDIAN_REPO }}
+          token: ${{ secrets.OBSIDIAN_TOKEN }}
+          path: obsidian
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 음력 계산 모듈 (NOJI 앱과 같은 버전)
+        run: npm install --no-save --no-audit --no-fund korean-lunar-calendar@0.3.6
+      - name: NOJI → 구글 캘린더
+        env:
+          NOJI_CLIENT_ID: ${{ secrets.NOJI_CLIENT_ID }}
+          NOJI_CLIENT_SECRET: ${{ secrets.NOJI_CLIENT_SECRET }}
+          NOJI_REFRESH_TOKEN: ${{ secrets.NOJI_REFRESH_TOKEN }}
+          DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: node scripts/noji-sync.mjs $DRY obsidian
+      - name: 옵시디언 저장소에 커밋
+        if: ${{ !inputs.dry_run }}
+        working-directory: obsidian
+        run: |
+          git config user.name "memo-app"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "옵시디언 기록 없음"; exit 0; }
+          git commit -m "NOJI 일정 변경 기록: $(date +%F)"
+          git pull --rebase   # 옵시디언 Git 플러그인이 그사이 올린 백업과 합침
+          git push

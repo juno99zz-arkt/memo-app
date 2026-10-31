@@ -42,3 +42,12 @@
 6. 비밀번호로 열고 → ⚙ 설정 → **Google 계정에 연결**
 
 동작: 열쇠(비밀번호+salt로 만든 AES 키)를 Drive 앱 폴더 `memo-key.json`에 저장. 비밀번호를 바꾸면 열쇠도 함께 갱신. 연결 해제 시 그 파일 삭제.
+
+## NOJI캘린더 → 구글 캘린더 매일 동기화 (`noji-sync.yml`)
+매일 04:37(KST, GitHub 예약이라 늦어질 수 있음) NOJI캘린더(Firestore) 일정을 구글 캘린더에 맞춘다. PC 없이 동작.
+- 내 구글 계정 권한(리프레시 토큰)으로 동작 → 알림(전날 09:00, 부동산·세금·지출은 7일 전 09:00 추가)이 내 캘린더에 그대로 적용
+- 구글 캘린더에서 건드리는 일정은 설명에 "NOJI캘린더에서 관리"가 있는 것뿐. 처음 실행 때 예전에 만들어 둔 NOJI 일정은 이어받고, NOJI에 짝이 없는 예전 일정은 지우지 않고 보고만 함
+- 음력 반복은 올해·내년 회차를 따로 만듦. 매월 29~31일 반복은 NOJI처럼 그달 말일로 당김
+- 바뀐 일정이 있으면 옵시디언 `Inbox_Squedule/YYYYMMDD-HHMM-NOJI-변경.md`에 메타데이터만 기록(`보안: 개인정보`, 메모 본문 제외). 첫 연결 때는 기록하지 않음
+- 시크릿: `NOJI_CLIENT_ID`, `NOJI_CLIENT_SECRET`, `NOJI_REFRESH_TOKEN`(범위 `calendar.events`, `datastore`), `OBSIDIAN_TOKEN`
+- 처음엔 Actions → NOJI 캘린더 동기화 → Run workflow에서 「미리보기」를 체크해 무엇이 바뀔지 먼저 확인
