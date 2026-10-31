@@ -28,8 +28,18 @@ jobs:
     steps:
       - name: 설정 확인
         env:
-          OK: ${{ secrets.NOJI_CLIENT_ID != '' && secrets.NOJI_CLIENT_SECRET != '' && secrets.NOJI_REFRESH_TOKEN != '' && secrets.OBSIDIAN_TOKEN != '' }}
-        run: '[ "$OK" = "true" ] || { echo "::error::NOJI_CLIENT_ID · NOJI_CLIENT_SECRET · NOJI_REFRESH_TOKEN · OBSIDIAN_TOKEN 시크릿을 등록하세요"; exit 1; }'
+          A: ${{ secrets.NOJI_CLIENT_ID != '' }}
+          B: ${{ secrets.NOJI_CLIENT_SECRET != '' }}
+          C: ${{ secrets.NOJI_REFRESH_TOKEN != '' }}
+          D: ${{ secrets.OBSIDIAN_TOKEN != '' }}
+        run: |
+          miss=""
+          [ "$A" = "true" ] || miss="$miss NOJI_CLIENT_ID"
+          [ "$B" = "true" ] || miss="$miss NOJI_CLIENT_SECRET"
+          [ "$C" = "true" ] || miss="$miss NOJI_REFRESH_TOKEN"
+          [ "$D" = "true" ] || miss="$miss OBSIDIAN_TOKEN"
+          if [ -n "$miss" ]; then echo "::error::memo-app 저장소 Actions 시크릿에 없음:$miss"; exit 1; fi
+          echo "시크릿 4개 확인"
       - uses: actions/checkout@v4
       - name: 옵시디언 저장소 가져오기
         uses: actions/checkout@v4
