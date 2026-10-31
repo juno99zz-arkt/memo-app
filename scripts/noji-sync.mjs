@@ -131,18 +131,18 @@ function desiredFor(ev) {
   const st = ev.status && ev.status !== '확정' ? `[${STATUS[ev.status] || ev.status}] ` : '';
   const desc = [(st + (ev.memo || '')).trim(), ev.lunar && ev.lm ? `음력 ${ev.lm}.${ev.ld}${ev.leap ? '(윤)' : ''}` : '', ev.src ? `출처: ${ev.src}` : '', `${MARK} · ${APP_URL}`].filter(Boolean).join('\n');
   // 2026-10-27 첫 동기화 때 만든 형식을 그대로 따른다(이어받기·중복 방지):
-  //   음력 반복 → '제목 (음 M.D)' 회차별 일정 5년치 / 기간 일정 → 가족은 한 일정, 그 밖은 '제목 시작 (~M/D)' + '제목 마감'(회사는 '종료') 두 일정
+  //   음력 반복 → '제목 (음 M.D)' 회차별 일정(올해부터 5년치) / 기간 일정 → 8일 이상(가족 제외)이면 '제목 시작 (~M/D)' + '제목 마감'(회사는 '종료') 두 일정, 그보다 짧으면 한 일정
   const name = `[${c.short}] ${ev.title}` + (ev.lunar && ev.lm ? ` (음 ${ev.lm}.${ev.ld}${ev.leap ? '(윤)' : ''})` : '');
   const base = { summary: name, description: desc, colorId: c.color, transparency: 'transparent',
     reminders: { useDefault: false, overrides: c.remind.map(m => ({ method: 'popup', minutes: m })) } };
-  const hasEnd = ev.end && ev.end > ev.date, split = hasEnd && ev.cat !== 'family', span = hasEnd && !split ? dayDiff(ev.date, ev.end) : 0;
+  const hasEnd = ev.end && ev.end > ev.date, split = hasEnd && ev.cat !== 'family' && dayDiff(ev.date, ev.end) >= 8, span = hasEnd && !split ? dayDiff(ev.date, ev.end) : 0;   // 일주일 안팎 기간은 한 일정, 그보다 길면(가족 제외) 시작·마감 두 일정
   const one = (start, extra = {}) => ({ ...base, start: { date: start }, end: { date: addDays(start, span + 1) }, ...extra });
   const rec = d => ev.repeat === 'yearly' ? { recurrence: ['RRULE:FREQ=YEARLY'] } : ev.repeat === 'monthly' ? { recurrence: [monthlyRule(Number(d.slice(8)))] } : {};
   if (ev.lunar && ev.lm && ev.repeat === 'yearly') {   // 구글 캘린더는 음력 반복이 없어 회차를 따로 만든다
     if (!KLC) { console.warn(`  ! 음력 계산 모듈이 없어 건너뜀: ${ev.title}`); return []; }
-    const y = Number(TODAY.slice(0, 4)), last = addDays(TODAY, 365 * 5);
-    const dates = Array.from({ length: 7 }, (_, i) => lunarToSolar(y - 1 + i, ev.lm, ev.ld)).filter(d => d && d >= ev.date && d >= addDays(TODAY, -7) && d <= last);
-    return dates.map(d => ({ key: `${ev.id}_${d}`, occ: d, body: one(d) }));
+    const y = Number(TODAY.slice(0, 4));   // 올해부터 5년치(올해 이미 지난 날짜도 포함해 기존 일정과 맞춤). 지난 회차는 새로 만들지 않고 이어받기만
+    const dates = Array.from({ length: 5 }, (_, i) => lunarToSolar(y + i, ev.lm, ev.ld)).filter(d => d && d >= ev.date);
+    return dates.map(d => ({ key: `${ev.id}_${d}`, occ: d, old: d < addDays(TODAY, -7), body: one(d) }));
   }
   const old = addDays(hasEnd ? ev.end : ev.date, 60) < TODAY && ev.repeat !== 'yearly' && ev.repeat !== 'monthly';
   if (split) {
