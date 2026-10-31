@@ -1,6 +1,6 @@
 # 옵시디언 저장소(비공개)에 .md 노트로 자동 보관
 #   매주 일요일 07:00(KST) 이번 주 To do → `To do.md` 갱신
-#   매주 월요일 05:00(KST) 지난 주 메모장 → 주별 노트(2026-W43.md …)
+#   (주별 노트 보관(월 05:00)은 2026-10-31 사용자 요청으로 중단. 필요하면 수동 실행 시 --notes)
 # 필요한 설정 (memo-app → Settings → Secrets and variables → Actions):
 #   Secrets  MEMO_PASSWORD   앱 비밀번호 (앱에서 비밀번호를 바꾸면 여기도 바꿔야 함)
 #            OBSIDIAN_TOKEN  옵시디언 저장소에 쓸 수 있는 토큰 (Contents: Read and write)
@@ -10,7 +10,6 @@ name: 옵시디언 자동 보관
 on:
   schedule:
     - cron: "0 22 * * 6"   # 토 22:00 UTC = 일 07:00 KST → To do 노트 갱신
-    - cron: "0 20 * * 0"   # 일 20:00 UTC = 월 05:00 KST → 지난 주 메모장 노트
   workflow_dispatch:
 permissions:
   contents: read
@@ -48,8 +47,7 @@ jobs:
         run: |
           case "$SCHEDULE" in
             "0 22 * * 6") echo "args=--todo" >> "$GITHUB_OUTPUT" ;;            # 일 07:00 KST
-            "0 20 * * 0") echo "args=--notes" >> "$GITHUB_OUTPUT" ;;           # 월 05:00 KST
-            *)            echo "args=--notes --todo" >> "$GITHUB_OUTPUT" ;;    # 수동 실행: 둘 다
+            *)            echo "args=--todo" >> "$GITHUB_OUTPUT" ;;            # 수동 실행: To do만
           esac
       - name: 메모장 → 옵시디언 노트
         env:
