@@ -5,7 +5,7 @@
 // 상태 읽기·주 계산·노트 형식은 index.html과 같아야 함 (그쪽을 바꾸면 여기도 함께)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { webcrypto as crypto } from 'node:crypto';
+import { webcrypto as crypto, createHash } from 'node:crypto';
 
 const argv = process.argv.slice(2), flags = new Set(argv.filter(a => a.startsWith('--')));
 const [vaultPath, outRoot] = argv.filter(a => !a.startsWith('--'));
@@ -89,6 +89,30 @@ function weekMarkdown(key, text, todo = '') {
   return L.join('\n') + '\n';
 }
 
+/* ───── 기존 노트 보호 ─────
+   옵시디언·정리 루틴이 노트에 붙인 속성(예: `보안: 사내전용`, 고친 tags)은 다시 쓸 때도 그대로 둔다.
+   앱 내용이 안 바뀐 주(memo-hash 동일)는 노트를 건드리지 않아 옵시디언에서 고친 본문도 지켜진다. */
+const OURS = new Set(['week', 'period', 'completion', 'todo', 'doing', 'done', 'hold', 'updated', 'memo-hash']);   // 매번 우리가 계산하는 속성
+function parseFront(txt) {
+  const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
+  if (!m) return { blocks: [], body: txt };
+  const blocks = [];
+  for (const line of m[1].split(/\r?\n/)) {
+    const k = line.match(/^([^\s:#\-][^:]*):/);
+    if (k || !blocks.length) blocks.push({ key: k ? k[1].trim() : '', lines: [line] }); else blocks[blocks.length - 1].lines.push(line);   // 들여쓴 줄·목록은 앞 속성에 붙임
+  }
+  return { blocks, body: txt.slice(m[0].length) };
+}
+const hashOf = (...parts) => createHash('sha1').update(parts.join('\0')).digest('hex').slice(0, 10);
+function mergeNote(gen, existing, hash) {
+  const g = parseFront(gen), e = existing ? parseFront(existing) : { blocks: [] };
+  const extras = e.blocks.filter(b => b.key && !OURS.has(b.key)), extraKeys = new Set(extras.map(b => b.key));
+  const blocks = [...g.blocks.filter(b => !extraKeys.has(b.key)), ...extras];   // tags처럼 겹치면 기존 것이 우선
+  if (hash) blocks.push({ key: 'memo-hash', lines: [`memo-hash: ${hash}`] });
+  return `---\n${blocks.flatMap(b => b.lines).join('\n')}\n---\n${g.body}`;
+}
+const hashInNote = txt => parseFront(txt).blocks.find(b => b.key === 'memo-hash')?.lines[0].split(':')[1]?.trim() || '';
+
 /* 이번 주 To do → 항상 같은 노트 하나를 갱신 */
 function todoNote(key, todo, at) {
   const g = collect(todo), others = todo.split('\n').filter(l => l.trim() && !parseLine(l)).map(l => l.trim());
@@ -117,15 +141,20 @@ if (doNotes) {   // 마감된 지난 주들 (내용이 같으면 그대로 둠)
   for (const key of Object.keys(db.weeks || {}).filter(k => k < cur).sort()) {
     const w = db.weeks[key], text = textOfWeek(w), todo = todoOfWeek(w);
     if (!text.trim() && !todo.trim()) continue;
-    const file = join(dir, `${key}.md`), body = weekMarkdown(key, text, todo);
-    if (existsSync(file) && readFileSync(file, 'utf8') === body) continue;
-    writeFileSync(file, body); written++;
-    console.log(`작성: ${folder}/${key}.md`);
+    const file = join(dir, `${key}.md`), gen = weekMarkdown(key, text, todo), hash = hashOf(text, todo);
+    const ex = existsSync(file) ? readFileSync(file, 'utf8') : null;
+    if (ex !== null) {
+      if (hashInNote(ex) === hash) continue;                   // 앱 내용이 그대로 → 노트(옵시디언에서 고친 부분 포함)를 건드리지 않음
+      if (!hashInNote(ex) && mergeNote(gen, ex, null) === ex) continue;   // 예전에 만든 노트인데 속성 외엔 같음
+    }
+    writeFileSync(file, mergeNote(gen, ex, hash)); written++;
+    console.log(`${ex === null ? '작성' : '갱신'}: ${folder}/${key}.md`);
   }
   console.log(`노트 · 이번 주 ${cur} · 새로 쓰거나 바뀐 노트 ${written}개`);
 }
 if (doTodo) {    // 이번 주 To do 한 장
   const todo = todoOfWeek(db.weeks?.[cur]);
-  writeFileSync(join(dir, 'To do.md'), todoNote(cur, todo, new Date()));
+  const tf = join(dir, 'To do.md');
+  writeFileSync(tf, mergeNote(todoNote(cur, todo, new Date()), existsSync(tf) ? readFileSync(tf, 'utf8') : null, null));
   console.log(`To do 갱신: ${folder}/To do.md (${cur}, ${collect(todo) && totalOf(collect(todo))}건)`);
 }
