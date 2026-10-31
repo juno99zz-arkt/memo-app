@@ -1,11 +1,15 @@
-// 지난 주 메모장을 옵시디언 노트(.md)로 내보내기 — GitHub Actions에서 매주 월 05:00(KST) 실행
-// 사용: MEMO_PASSWORD=... node scripts/export-obsidian.mjs <vault.json> <옵시디언 저장소 폴더>
+// 메모장을 옵시디언 노트(.md)로 내보내기 — GitHub Actions에서 실행
+//   --notes : 지난 주 메모장 → 주별 노트 (매주 월 05:00 KST)
+//   --todo  : 이번 주 To do → `To do.md` 갱신 (매주 일 07:00 KST)   (플래그가 없으면 --notes)
+// 사용: MEMO_PASSWORD=... node scripts/export-obsidian.mjs [--notes] [--todo] <vault.json> <옵시디언 저장소 폴더>
 // 상태 읽기·주 계산·노트 형식은 index.html과 같아야 함 (그쪽을 바꾸면 여기도 함께)
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { webcrypto as crypto } from 'node:crypto';
 
-const [vaultPath, outRoot] = process.argv.slice(2);
+const argv = process.argv.slice(2), flags = new Set(argv.filter(a => a.startsWith('--')));
+const [vaultPath, outRoot] = argv.filter(a => !a.startsWith('--'));
+const doTodo = flags.has('--todo'), doNotes = flags.has('--notes') || !doTodo;
 const password = process.env.MEMO_PASSWORD;
 if (!vaultPath || !outRoot) { console.error('사용: node export-obsidian.mjs <vault.json> <출력 폴더>'); process.exit(2); }
 if (!password) { console.error('MEMO_PASSWORD 시크릿이 없습니다'); process.exit(2); }
@@ -45,6 +49,7 @@ async function openVault(file, pw) {
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
+const todoOfWeek = w => (typeof w?.todo === 'string' ? w.todo : '');
 /* 이전 버전(메모 여러 개)도 메모장 텍스트로 */
 function textOfWeek(w) {
   if (typeof w?.text === 'string') return w.text;
@@ -69,8 +74,8 @@ function collect(text) {
 const totalOf = g => ST_ORDER.reduce((s, k) => s + g[k].length, 0);
 const rateOf = g => { const t = totalOf(g); return t ? Math.round(g.done.length / t * 100) : 0; };
 
-function weekMarkdown(key, text) {
-  const g = collect(text), s = weekStart(key), e = weekEnd(key);
+function weekMarkdown(key, text, todo = '') {
+  const g = collect([todo, text].filter(Boolean).join('\n')), s = weekStart(key), e = weekEnd(key);   // 집계는 To do + Inbox
   const L = ['---', `week: ${key}`, `period: ${ymd(s)} ${hm(s)} ~ ${ymd(e)} ${hm(e)}`, `completion: ${rateOf(g)}`,
     `todo: ${g.todo.length}`, `doing: ${g.doing.length}`, `done: ${g.done.length}`, `hold: ${g.hold.length}`, 'tags: [주간메모]', '---', '',
     `# ${key} 메모장`, '', `> ${weekRange(key)} · 준비 ${g.todo.length} · 진행 ${g.doing.length} · 완료 ${g.done.length} · 보류 ${g.hold.length} · 완료율 ${rateOf(g)}%`, ''];
@@ -79,11 +84,24 @@ function weekMarkdown(key, text) {
     for (const k of ['done', 'doing', 'todo', 'hold']) if (g[k].length) { L.push('', `### ${ST_EMOJI[k]} ${ST[k]} (${g[k].length})`); for (const p of g[k]) L.push(`- [${k === 'done' ? 'x' : ' '}] ${p.text}`); }
     L.push('');
   }
-  L.push('## 메모', '', text.trim());
+  if (todo.trim()) L.push('## To do', '', todo.trim(), '', '## Inbox', '', text.trim());
+  else L.push('## 메모', '', text.trim());   // To do가 없는 주는 예전 형식 그대로 (이미 보관된 노트를 다시 쓰지 않음)
   return L.join('\n') + '\n';
 }
 
-/* ───── 실행: 마감된 모든 지난 주를 쓰고(내용 같으면 그대로), 바뀐 파일 수 출력 ───── */
+/* 이번 주 To do → 항상 같은 노트 하나를 갱신 */
+function todoNote(key, todo, at) {
+  const g = collect(todo), others = todo.split('\n').filter(l => l.trim() && !parseLine(l)).map(l => l.trim());
+  const L = ['---', `week: ${key}`, `updated: ${ymd(at)} ${hm(at)}`, `todo: ${g.todo.length}`, `doing: ${g.doing.length}`, `done: ${g.done.length}`, `hold: ${g.hold.length}`, 'tags: [할일]', '---', '',
+    `# To do · ${key}`, '', `> 메모 앱이 매주 일요일 07:00에 자동으로 덮어씁니다 (여기서 고치지 마세요) · ${weekRange(key)}`,
+    `> 준비 ${g.todo.length} · 진행 ${g.doing.length} · 완료 ${g.done.length} · 보류 ${g.hold.length}`, ''];
+  for (const k of ['doing', 'todo', 'hold', 'done']) if (g[k].length) { L.push(`## ${ST_EMOJI[k]} ${ST[k]} (${g[k].length})`, ''); for (const p of g[k]) L.push(`- [${k === 'done' ? 'x' : ' '}] ${p.text}`); L.push(''); }
+  if (others.length) { L.push('## 기타', ''); for (const l of others) L.push(l); L.push(''); }
+  if (!totalOf(g) && !others.length) L.push('_이번 주 To do가 비어 있습니다._', '');
+  return L.join('\n');
+}
+
+/* ───── 실행 ───── */
 let db;
 try { db = await openVault(JSON.parse(readFileSync(vaultPath, 'utf8')), password); }
 catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 같은지 확인하세요'); process.exit(1); }
@@ -93,13 +111,21 @@ const folder = (process.env.OBSIDIAN_FOLDER || (saved && saved !== '메모/주�
 const dir = join(outRoot, folder);
 mkdirSync(dir, { recursive: true });
 const cur = isoWeek();
-let written = 0;
-for (const key of Object.keys(db.weeks || {}).filter(k => k < cur).sort()) {
-  const text = textOfWeek(db.weeks[key]);
-  if (!text.trim()) continue;
-  const file = join(dir, `${key}.md`), body = weekMarkdown(key, text);
-  if (existsSync(file) && readFileSync(file, 'utf8') === body) continue;
-  writeFileSync(file, body); written++;
-  console.log(`작성: ${folder}/${key}.md`);
+
+if (doNotes) {   // 마감된 지난 주들 (내용이 같으면 그대로 둠)
+  let written = 0;
+  for (const key of Object.keys(db.weeks || {}).filter(k => k < cur).sort()) {
+    const w = db.weeks[key], text = textOfWeek(w), todo = todoOfWeek(w);
+    if (!text.trim() && !todo.trim()) continue;
+    const file = join(dir, `${key}.md`), body = weekMarkdown(key, text, todo);
+    if (existsSync(file) && readFileSync(file, 'utf8') === body) continue;
+    writeFileSync(file, body); written++;
+    console.log(`작성: ${folder}/${key}.md`);
+  }
+  console.log(`노트 · 이번 주 ${cur} · 새로 쓰거나 바뀐 노트 ${written}개`);
 }
-console.log(`완료 · 이번 주 ${cur} · 새로 쓰거나 바뀐 노트 ${written}개`);
+if (doTodo) {    // 이번 주 To do 한 장
+  const todo = todoOfWeek(db.weeks?.[cur]);
+  writeFileSync(join(dir, 'To do.md'), todoNote(cur, todo, new Date()));
+  console.log(`To do 갱신: ${folder}/To do.md (${cur}, ${collect(todo) && totalOf(collect(todo))}건)`);
+}

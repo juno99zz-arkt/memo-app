@@ -1,4 +1,6 @@
-# 매주 월요일 05:00(KST) 지난 주 메모장을 옵시디언 저장소(비공개)에 .md 노트로 보관
+# 옵시디언 저장소(비공개)에 .md 노트로 자동 보관
+#   매주 일요일 07:00(KST) 이번 주 To do → `To do.md` 갱신
+#   매주 월요일 05:00(KST) 지난 주 메모장 → 주별 노트(2026-W43.md …)
 # 필요한 설정 (memo-app → Settings → Secrets and variables → Actions):
 #   Secrets  MEMO_PASSWORD   앱 비밀번호 (앱에서 비밀번호를 바꾸면 여기도 바꿔야 함)
 #            OBSIDIAN_TOKEN  옵시디언 저장소에 쓸 수 있는 토큰 (Contents: Read and write)
@@ -7,7 +9,8 @@
 name: 옵시디언 자동 보관
 on:
   schedule:
-    - cron: "0 20 * * 0"   # 일 20:00 UTC = 월 05:00 KST
+    - cron: "0 22 * * 6"   # 토 22:00 UTC = 일 07:00 KST → To do 노트 갱신
+    - cron: "0 20 * * 0"   # 일 20:00 UTC = 월 05:00 KST → 지난 주 메모장 노트
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,11 +41,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: 지난 주 메모장 → 노트
+      - name: 실행 종류 정하기
+        id: mode
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          case "$SCHEDULE" in
+            "0 22 * * 6") echo "args=--todo" >> "$GITHUB_OUTPUT" ;;            # 일 07:00 KST
+            "0 20 * * 0") echo "args=--notes" >> "$GITHUB_OUTPUT" ;;           # 월 05:00 KST
+            *)            echo "args=--notes --todo" >> "$GITHUB_OUTPUT" ;;    # 수동 실행: 둘 다
+          esac
+      - name: 메모장 → 옵시디언 노트
         env:
           MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
           OBSIDIAN_FOLDER: ${{ vars.OBSIDIAN_FOLDER }}
-        run: node scripts/export-obsidian.mjs vault.json obsidian
+          ARGS: ${{ steps.mode.outputs.args }}
+        run: node scripts/export-obsidian.mjs $ARGS vault.json obsidian
       - name: 옵시디언 저장소에 커밋
         working-directory: obsidian
         run: |
@@ -51,6 +65,6 @@ jobs:
           git add -A
           # 바뀐 노트가 없어도 토큰 쓰기 권한은 확인 (만료되면 이 단계가 실패)
           git diff --cached --quiet && { echo "바뀐 노트 없음"; git push --dry-run; exit 0; }
-          git commit -m "주간 메모장 보관: $(date +%F)"
+          git commit -m "메모 보관: $(date +%F)"
           git pull --rebase   # 옵시디언 Git 플러그인이 그사이 올린 백업과 합침
           git push
