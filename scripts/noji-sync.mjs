@@ -130,18 +130,27 @@ function desiredFor(ev) {
   const c = CATS[ev.cat] || CATS.estate;
   const st = ev.status && ev.status !== '확정' ? `[${STATUS[ev.status] || ev.status}] ` : '';
   const desc = [(st + (ev.memo || '')).trim(), ev.lunar && ev.lm ? `음력 ${ev.lm}.${ev.ld}${ev.leap ? '(윤)' : ''}` : '', ev.src ? `출처: ${ev.src}` : '', `${MARK} · ${APP_URL}`].filter(Boolean).join('\n');
-  const base = { summary: `[${c.short}] ${ev.title}`, description: desc, colorId: c.color, transparency: 'transparent',
+  // 2026-10-27 첫 동기화 때 만든 형식을 그대로 따른다(이어받기·중복 방지):
+  //   음력 반복 → '제목 (음 M.D)' 회차별 일정 5년치 / 기간 일정 → 가족은 한 일정, 그 밖은 '제목 시작 (~M/D)' + '제목 마감'(회사는 '종료') 두 일정
+  const name = `[${c.short}] ${ev.title}` + (ev.lunar && ev.lm ? ` (음 ${ev.lm}.${ev.ld}${ev.leap ? '(윤)' : ''})` : '');
+  const base = { summary: name, description: desc, colorId: c.color, transparency: 'transparent',
     reminders: { useDefault: false, overrides: c.remind.map(m => ({ method: 'popup', minutes: m })) } };
-  const span = ev.end && ev.end > ev.date ? dayDiff(ev.date, ev.end) : 0;
+  const hasEnd = ev.end && ev.end > ev.date, split = hasEnd && ev.cat !== 'family', span = hasEnd && !split ? dayDiff(ev.date, ev.end) : 0;
   const one = (start, extra = {}) => ({ ...base, start: { date: start }, end: { date: addDays(start, span + 1) }, ...extra });
-  if (ev.lunar && ev.lm && ev.repeat === 'yearly') {   // 구글 캘린더는 음력 반복이 없어 올해·내년 회차를 따로 만든다
+  const rec = d => ev.repeat === 'yearly' ? { recurrence: ['RRULE:FREQ=YEARLY'] } : ev.repeat === 'monthly' ? { recurrence: [monthlyRule(Number(d.slice(8)))] } : {};
+  if (ev.lunar && ev.lm && ev.repeat === 'yearly') {   // 구글 캘린더는 음력 반복이 없어 회차를 따로 만든다
     if (!KLC) { console.warn(`  ! 음력 계산 모듈이 없어 건너뜀: ${ev.title}`); return []; }
-    const y = Number(TODAY.slice(0, 4)), dates = [y - 1, y, y + 1].map(yy => lunarToSolar(yy, ev.lm, ev.ld)).filter(d => d && d >= ev.date && d >= addDays(TODAY, -7));
+    const y = Number(TODAY.slice(0, 4)), last = addDays(TODAY, 365 * 5);
+    const dates = Array.from({ length: 7 }, (_, i) => lunarToSolar(y - 1 + i, ev.lm, ev.ld)).filter(d => d && d >= ev.date && d >= addDays(TODAY, -7) && d <= last);
     return dates.map(d => ({ key: `${ev.id}_${d}`, occ: d, body: one(d) }));
   }
-  if (ev.repeat === 'yearly') return [{ key: ev.id, body: one(ev.date, { recurrence: ['RRULE:FREQ=YEARLY'] }) }];
-  if (ev.repeat === 'monthly') return [{ key: ev.id, body: one(ev.date, { recurrence: [monthlyRule(Number(ev.date.slice(8)))] }) }];
-  return [{ key: ev.id, body: one(ev.date), old: addDays(ev.end && ev.end > ev.date ? ev.end : ev.date, 60) < TODAY }];
+  const old = addDays(hasEnd ? ev.end : ev.date, 60) < TODAY && ev.repeat !== 'yearly' && ev.repeat !== 'monthly';
+  if (split) {
+    const md = s => `${Number(s.slice(5, 7))}/${Number(s.slice(8))}`;
+    return [{ key: `${ev.id}#s`, part: 's', old, body: { ...one(ev.date, rec(ev.date)), summary: `${name} 시작 (~${md(ev.end)})` } },
+            { key: `${ev.id}#e`, part: 'e', old, body: { ...one(ev.end, rec(ev.end)), summary: `${name} ${ev.cat === 'work' ? '종료' : '마감'}` } }];
+  }
+  return [{ key: ev.id, old, body: one(ev.date, rec(ev.date)) }];
 }
 
 /* ───── 구글 일정 → NOJI 값 ───── */
@@ -187,7 +196,7 @@ function similar(a, b) {
   const ta = toks(a), tb = toks(b), ti = [...ta].filter(t => tb.has(t)).length;
   if (ta.size && tb.size && ti / Math.min(ta.size, tb.size) >= 0.5) return true;
   const ba = bigr(A), bb = bigr(B), bi = [...ba].filter(x => bb.has(x)).length;
-  return ba.size && bb.size ? bi / Math.min(ba.size, bb.size) >= 0.6 : false;
+  return ba.size && bb.size ? bi / Math.min(ba.size, bb.size) >= 0.4 : false;   // findSame은 항상 같은 날짜일 때만 부름
 }
 const onDate = (e, date) => e.date === date || (e.repeat === 'yearly' && e.date.slice(5) === date.slice(5)) || (e.repeat === 'monthly' && e.date.slice(8) === date.slice(8));
 const findSame = (list, date, end, title) => list.find(e => onDate(e, date) && (similar(e.title, title) || (end && e.end === end && [...toks(e.title)].some(t => toks(title).has(t)))));
@@ -212,7 +221,7 @@ function parseHome(md) {
     const what = c[2].replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, '$1').replace(/\*\*/g, '');
     const cut = what.search(/[.:]\s|:/), title = (cut > 0 ? what.slice(0, cut) : what).trim(), memo = cut > 0 ? what.slice(cut + 1).replace(/^[\s.:]+/, '').trim() : '';
     const refs = [...(c[3] || '').matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g)].map(x => x[1].split('#')[0].trim());
-    const text = what + ' ' + refs.join(' '), cat = (CAT_WORDS.find(([, re]) => re.test(text)) || ['work'])[0];
+    const cat = (CAT_WORDS.find(([, re]) => re.test(refs.join(' '))) || CAT_WORDS.find(([, re]) => re.test(what)) || ['work'])[0];   // 기준 노트 이름을 먼저, 없으면 항목 문구로
     out.push({ key: h([date, norm(title)]), date, end, status, title, memo, cat, src: ['옵시디언 홈', ...new Set(refs)].join(' · ') });
   }
   return out;
@@ -252,9 +261,11 @@ for (const [nid, L] of Object.entries(state.links).filter(([, l]) => l.kind === 
 const win = `timeMin=${encodeURIComponent(WIN_FROM + 'T00:00:00+09:00')}&timeMax=${encodeURIComponent(WIN_TO + 'T00:00:00+09:00')}&singleEvents=false`;
 const linkedG = new Set(Object.values(state.links).map(l => `${l.cal}|${l.gid}`));
 const isManaged = e => (e.description || '').includes(MARK) || e.extendedProperties?.private?.noji === '1';
+const famAll = await listCal(FAMILY, win), priAll = await listCal(PRIMARY, win);
+const stat = { 가족: famAll.length, 개인: priAll.length, 개인반복제외: priAll.filter(e => e.recurrence || e.recurringEventId).length, NOJI관리: [...famAll, ...priAll].filter(isManaged).length };
 const candidates = [
-  ...(await listCal(FAMILY, win)).map(e => ({ e, cal: FAMILY })),
-  ...(await listCal(PRIMARY, win)).filter(e => !e.recurrence && !e.recurringEventId).map(e => ({ e, cal: PRIMARY })),
+  ...famAll.map(e => ({ e, cal: FAMILY })),
+  ...priAll.filter(e => !e.recurrence && !e.recurringEventId).map(e => ({ e, cal: PRIMARY })),
 ].filter(({ e, cal }) => e.status !== 'cancelled' && (!e.eventType || e.eventType === 'default') && !isManaged(e) && !e.recurringEventId
   && !linkedG.has(`${cal}|${e.id}`) && !state.ignored[`${cal}|${e.id}`] && !(e.attendees || []).some(a => a.self && a.responseStatus === 'declined'));
 for (const { e, cal } of candidates) {
@@ -295,7 +306,9 @@ for (const ev of noji.filter(e => state.links[e.id]?.kind !== 'import')) for (co
     const nCh = !L || L.nSig !== nSigOf(ev), gCh = !!L && L.gSig !== gSigOf(cur);
     const pull = gCh && !ev.lunar && repeatOf(cur) !== null && (!nCh || gDate(cur) > (ev.updatedAt || ''));
     if (pull) {   // 구글에서 고친 것이 더 최근 → NOJI에 반영
-      const nv = fromManaged(cur, ev); await nojiSave(ev.id, nv); Object.assign(ev, nv); log('변경', '구글→NOJI', ev, d.occ);
+      const nv = fromManaged(cur, ev); nv.title = nv.title.replace(/ 시작 \(~[^)]*\)$| (마감|종료)$/, '').replace(/ \(음 [^)]*\)$/, '');
+      if (d.part === 's') nv.end = ev.end; if (d.part === 'e') { nv.end = nv.date; nv.date = ev.date; }
+      await nojiSave(ev.id, nv); Object.assign(ev, nv); log('변경', '구글→NOJI', ev, d.occ);
       plan.push({ label: `NOJI 수정(구글에서 고친 내용): ${ev.title}` });
       const nd = desiredFor(ev).find(x => x.key === d.key) || d;   // 표시 형식(색·알림·설명 줄)만 다시 맞춤
       if (sigFull(cur) !== sigFull(nd.body)) calOps.push({ op: 'patch', id: cur.id, key: d.key, ev, body: { ...nd.body, recurrence: nd.body.recurrence || [] }, label: `${nd.body.summary} (형식 맞춤)` });
@@ -337,6 +350,7 @@ for (const x of calOps) {
 await writeState(state);
 
 /* ───── 보고 ───── */
+console.log(`구글 일정 읽음: 가족 캘린더 ${stat.가족}개 · 개인 캘린더 ${stat.개인}개(매주 등 반복 ${stat.개인반복제외}개는 가져오지 않음, NOJI가 관리하는 ${stat.NOJI관리}개 제외)`);
 console.log(`NOJI ${noji.length}개 · ${firstRun ? '첫 연결' : '정기 동기화'}${DRY ? ' · 미리보기(--dry-run, 아무것도 바꾸지 않음)' : ''}`);
 for (const x of plan) console.log(`  ${x.label}`);
 if (!plan.length) console.log('  바뀐 일정 없음');
