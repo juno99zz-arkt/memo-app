@@ -52,16 +52,17 @@
   .paper { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
   /* 세 칸 카드: Completed Tasks · To do List · Memo */
   .stamp { text-align: center; font-size: 12px; color: #9ca3af; margin: 10px 0 0; min-height: 16px; }
-  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-top: 12px; overflow: hidden; }
-  .chead { display: flex; align-items: center; gap: 8px; padding: 13px 16px 0; }
-  .pill { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid; letter-spacing: .01em; }
-  .pill-done { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
-  .pill-todo { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
-  .pill-memo { color: #6b7280; border-color: #e5e7eb; background: #f9fafb; }
-  .cnt { font-size: 12px; color: var(--muted); }
-  .mini-btn { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; background: #fff; }
-  .mini-btn:hover { background: var(--soft); }
-  .card textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; padding: 8px 16px 14px; font-size: 15px; line-height: 1.75; }
+  .card { --ca: #9ca3af; --cb: var(--line); --cbg: var(--paper); --ch: #f9fafb;
+          background: var(--cbg); border: 1px solid var(--cb); border-left: 5px solid var(--ca); border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05); margin-top: 18px; overflow: hidden; }
+  .card.c-done { --ca: #16a34a; --cb: #cdeedb; --cbg: #f7fdf9; --ch: #e8f9ef; }
+  .card.c-todo { --ca: #2563eb; --cb: #d3e3fb; --cbg: #f8fbff; --ch: #e8f1ff; }
+  .card.c-memo { --ca: #d97706; --cb: #f7e3bd; --cbg: #fffdf7; --ch: #fff2d6; }
+  .chead { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--ch); border-bottom: 1px solid var(--cb); }
+  .pill { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; background: var(--ca); letter-spacing: .01em; }
+  .cnt { font-size: 12px; font-weight: 700; color: var(--ca); background: #fff; border: 1px solid var(--cb); border-radius: 999px; padding: 1px 9px; min-width: 24px; text-align: center; }
+  .mini-btn { font-size: 11px; font-weight: 600; color: var(--ca); border: 1px solid var(--cb); border-radius: 999px; padding: 3px 10px; background: #fff; }
+  .mini-btn:hover { background: var(--ch); }
+  .card textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; padding: 12px 16px 16px; font-size: 15px; line-height: 1.75; }
   .card textarea::placeholder { color: #b8bcc3; }
   #done { min-height: 84px; } #todo { min-height: 110px; } #note { min-height: 42vh; font-size: 16px; }
   .footrow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
@@ -147,16 +148,16 @@
   <div class="wrap">
     <div class="stamp" id="stamp"></div>
 
-    <section class="card">
+    <section class="card c-done">
       <div class="chead"><span class="pill pill-done">Completed Tasks</span><span class="cnt" id="nDone">0</span></div>
       <textarea id="done" spellcheck="false" placeholder="이번 주 끝낸 일을 한 줄씩"></textarea>
     </section>
-    <section class="card">
+    <section class="card c-todo">
       <div class="chead"><span class="pill pill-todo">To do List</span><span class="cnt" id="nTodo">0</span><span class="grow"></span><button class="mini-btn hidden" id="moveDone" type="button">✓ 완료한 줄 옮기기</button></div>
       <textarea id="todo" spellcheck="false" placeholder="해야 할 일을 한 줄씩
 끝낸 줄은 앞에 '완료'를 붙이면 옮길 수 있어요"></textarea>
     </section>
-    <section class="card">
+    <section class="card c-memo">
       <div class="chead"><span class="pill pill-memo">Memo</span></div>
       <textarea id="note" spellcheck="false" placeholder="자유롭게 적으세요."></textarea>
     </section>
@@ -175,15 +176,15 @@
       <div class="grow"><div class="wk" id="vTitle"></div><div class="muted small" id="vRange"></div></div>
       <button class="icon-btn" data-close="viewer" aria-label="닫기">✕</button>
     </div>
-    <section class="card">
+    <section class="card c-done">
       <div class="chead"><span class="pill pill-done">Completed Tasks</span><span class="cnt" id="vnDone">0</span></div>
       <textarea id="pastDone" spellcheck="false"></textarea>
     </section>
-    <section class="card">
+    <section class="card c-todo">
       <div class="chead"><span class="pill pill-todo">To do List</span><span class="cnt" id="vnTodo">0</span></div>
       <textarea id="pastTodo" spellcheck="false"></textarea>
     </section>
-    <section class="card">
+    <section class="card c-memo">
       <div class="chead"><span class="pill pill-memo">Memo</span></div>
       <textarea id="pastNote" spellcheck="false"></textarea>
     </section>
