@@ -1,6 +1,6 @@
-# 옵시디언 저장소(비공개)에 .md 노트로 자동 보관
-#   매주 일요일 07:00(KST) 이번 주 To do → `To do.md` 갱신
-#   (주별 노트 보관(월 05:00)은 2026-10-31 사용자 요청으로 중단. 필요하면 수동 실행 시 --notes)
+# 옵시디언 저장소(비공개)에 .md 노트로 자동 기록 — 매주 일요일 07:00(KST)
+#   이번 주 노트 `YYYY-Www.md` (Completed Tasks · To do List · Memo 세 칸) + `To do.md`(이번 주 할 일) 갱신
+#   지난 주 노트는 이 형식으로 이미 있고 앱 내용이 바뀐 경우에만 갱신, 예전 형식 노트는 건드리지 않음
 # 필요한 설정 (memo-app → Settings → Secrets and variables → Actions):
 #   Secrets  MEMO_PASSWORD   앱 비밀번호 (앱에서 비밀번호를 바꾸면 여기도 바꿔야 함)
 #            OBSIDIAN_TOKEN  옵시디언 저장소에 쓸 수 있는 토큰 (Contents: Read and write)
@@ -9,7 +9,7 @@
 name: 옵시디언 자동 보관
 on:
   schedule:
-    - cron: "0 22 * * 6"   # 토 22:00 UTC = 일 07:00 KST → To do 노트 갱신
+    - cron: "0 22 * * 6"   # 토 22:00 UTC = 일 07:00 KST
   workflow_dispatch:
 permissions:
   contents: read
@@ -40,21 +40,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: 실행 종류 정하기
-        id: mode
-        env:
-          SCHEDULE: ${{ github.event.schedule }}
-        run: |
-          case "$SCHEDULE" in
-            "0 22 * * 6") echo "args=--todo" >> "$GITHUB_OUTPUT" ;;            # 일 07:00 KST
-            *)            echo "args=--todo" >> "$GITHUB_OUTPUT" ;;            # 수동 실행: To do만
-          esac
       - name: 메모장 → 옵시디언 노트
         env:
           MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
           OBSIDIAN_FOLDER: ${{ vars.OBSIDIAN_FOLDER }}
-          ARGS: ${{ steps.mode.outputs.args }}
-        run: node scripts/export-obsidian.mjs $ARGS vault.json obsidian
+        run: node scripts/export-obsidian.mjs vault.json obsidian
       - name: 옵시디언 저장소에 커밋
         working-directory: obsidian
         run: |
@@ -63,6 +53,6 @@ jobs:
           git add -A
           # 바뀐 노트가 없어도 토큰 쓰기 권한은 확인 (만료되면 이 단계가 실패)
           git diff --cached --quiet && { echo "바뀐 노트 없음"; git push --dry-run; exit 0; }
-          git commit -m "메모 보관: $(date +%F)"
+          git commit -m "메모 기록: $(date +%F)"
           git pull --rebase   # 옵시디언 Git 플러그인이 그사이 올린 백업과 합침
           git push
