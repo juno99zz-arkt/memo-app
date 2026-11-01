@@ -163,6 +163,7 @@
     </section>
 
     <div class="footrow"><span class="rate" id="rate"></span><span class="grow"></span><button class="btn" id="obsNow" type="button">옵시디언에 기록</button></div>
+    <div class="rate" id="obsStamp" style="text-align:right;margin-top:6px"></div>
 
     <h2 class="sec" id="pastHead">지난 메모장</h2>
     <div class="paper" id="pastList"></div>
@@ -189,7 +190,7 @@
       <textarea id="pastNote" spellcheck="false"></textarea>
     </section>
     <div class="row" style="margin-top:12px;flex-wrap:wrap">
-      <button class="btn" id="vObs">옵시디언으로 보내기</button>
+      <button class="btn" id="vObs">옵시디언에 기록</button>
       <button class="btn" id="vMd">.md 저장</button>
       <button class="btn" id="vCopy">요약 복사</button>
       <span class="muted small" id="vSent"></span>
@@ -218,11 +219,10 @@
     </ol>
 
     <label class="lbl">옵시디언</label>
-    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다. 바로 보내려면 메모장 아래 「옵시디언에 기록」을 누르세요.</div>
-    <div class="row">
-      <input class="field" id="sObsVault" placeholder="볼트 이름 (비우면 마지막 볼트)">
-      <input class="field" id="sObsFolder" placeholder="폴더 (예: 2. Area of Responsibility/주간 메모)">
-    </div>
+    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다. 바로 기록하려면 메모장 아래 「옵시디언에 기록」을 누르세요.</div>
+    <input class="field" id="sObsRepo" placeholder="옵시디언 저장소 (owner/repo)">
+    <input class="field" id="sObsFolder" placeholder="폴더 (예: 2. Area of Responsibility/주간 메모)" style="margin-top:8px">
+    <div class="muted small" style="margin-top:6px">「옵시디언에 기록」을 누르면 이 저장소에 바로 기록됩니다. GitHub 토큰에 이 저장소의 <b>Contents: Read and write</b> 권한이 필요합니다 (GitHub → Settings → Developer settings → Fine-grained tokens → 해당 토큰 → Repository access에 추가). 옵시디언에는 Obsidian Git이 받아오는 시점에 보입니다.</div>
 
     <label class="lbl">GitHub 동기화</label>
     <input class="field" id="sRepo" placeholder="owner/repo">
@@ -339,7 +339,7 @@ let DB = null, curWeek = isoWeek(), dirty = false, saving = false, saveTimer = n
 let rev = 0, savedRev = 0;   // 고친 횟수 / 저장 끝난 횟수 — 저장하는 동안 또 고친 내용을 놓치지 않기 위함
 
 function emptyDB() { return { v: 2, settings: { token: '', carry: true, obsidian: { vault: '', folder: '2. Area of Responsibility/주간 메모' }, updated: now() }, weeks: {} }; }
-function obs() { const o = { vault: '', ...(DB.settings.obsidian || {}) }; if (!o.folder || o.folder === '메모/주간') o.folder = '2. Area of Responsibility/주간 메모'; return o; }   // 예전 기본값은 새 기본 폴더로
+function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '2. Area of Responsibility/주간 메모'; return o; }   // 예전 기본값은 새 기본 폴더로
 function week(key) { return DB.weeks[key] || (DB.weeks[key] = { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '' }); }
 const textOf = key => DB.weeks[key]?.text || '';        // Memo
 const todoOf = key => DB.weeks[key]?.todo || '';        // To do List
@@ -623,7 +623,7 @@ async function lock() {
   for (let i = 0; saving && i < 100; i++) await new Promise(r => setTimeout(r, 100));   // 저장 중이면 끝날 때까지 기다림
   if (rev !== savedRev) await saveNow();
   KEY = null; DB = null; SHA = null;
-    $('done').value = $('todo').value = $('note').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent = '';
+    $('done').value = $('todo').value = $('note').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent = $('obsStamp').textContent = '';
   $('app').classList.add('hidden'); $('viewer').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
   $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
@@ -674,7 +674,7 @@ function render(force) {
   $('wkRange').textContent = weekRange(curWeek);
   for (const [id, get] of [['done', doneOf], ['todo', todoOf], ['note', textOf]]) { const el = $(id); if (force || (document.activeElement !== el && el.value !== get(curWeek))) el.value = get(curWeek); }
   growDone($('done')); growTodo($('todo')); growNote();
-  renderCounts();
+  renderCounts(); renderObsStamp();
 
   const past = Object.keys(DB.weeks).filter(k => k < curWeek && allOf(k).trim()).sort().reverse();
   $('pastHead').textContent = `지난 메모장 · ${past.length}`;
@@ -731,13 +731,89 @@ function weekMarkdown(key) {
     '## 📋 To do List', '', ...(nt ? itemLines(todo, ' ') : ['_없음_']), '',
     '## 📝 Memo', '', memo.trim() || '_없음_', ''].join('\n');
 }
-function sendObsidian(key) {
-  const o = obs(), folder = o.folder.replace(/^\/+|\/+$/g, ''), file = folder ? `${folder}/${key}` : key;
-  const q = [o.vault && `vault=${encodeURIComponent(o.vault)}`, `file=${encodeURIComponent(file)}`, `content=${encodeURIComponent(weekMarkdown(key))}`, 'overwrite=true'].filter(Boolean).join('&');
-  week(key).obsidianAt = now(); scheduleSave();
-  $('vSent').textContent = `옵시디언 전송 ${fmtDT(week(key).obsidianAt)}`;
-  location.href = `obsidian://new?${q}`;
+/* ───────── 옵시디언 저장소에 바로 기록 (GitHub API) ─────────
+   앱이 옵시디언 저장소의 노트를 직접 만들거나 고친다. scripts/export-obsidian.mjs(일요일 자동 기록)와 같은 형식·같은 보호 규칙:
+   · 옵시디언·정리 루틴이 붙인 속성(보안·tags 등)은 그대로 둔다   · 앱 내용이 안 바뀌었으면(memo-hash 동일) 노트를 건드리지 않는다 */
+const OBS_OURS = new Set(['week', 'period', 'completed', 'completion', 'todo', 'doing', 'done', 'hold', 'updated', 'memo-hash']);   // 매번 앱이 계산하는 속성
+function parseFront(txt) {
+  const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
+  if (!m) return { blocks: [], body: txt };
+  const blocks = [];
+  for (const line of m[1].split(/\r?\n/)) {
+    const k = line.match(/^([^\s:#\-][^:]*):/);
+    if (k || !blocks.length) blocks.push({ key: k ? k[1].trim() : '', lines: [line] }); else blocks[blocks.length - 1].lines.push(line);
+  }
+  return { blocks, body: txt.slice(m[0].length) };
 }
+async function sha10(...parts) { const d = await crypto.subtle.digest('SHA-1', te.encode(parts.join('\0'))); return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 10); }
+function mergeNote(gen, existing, hash) {
+  const g = parseFront(gen), e = existing ? parseFront(existing) : { blocks: [] };
+  const extras = e.blocks.filter(b => b.key && !OBS_OURS.has(b.key)), extraKeys = new Set(extras.map(b => b.key));
+  const blocks = [...g.blocks.filter(b => !extraKeys.has(b.key)), ...extras];   // tags처럼 겹치면 기존 것이 우선
+  if (hash) blocks.push({ key: 'memo-hash', lines: [`memo-hash: ${hash}`] });
+  return `---\n${blocks.flatMap(b => b.lines).join('\n')}\n---\n${g.body}`;
+}
+const hashInNote = txt => parseFront(txt).blocks.find(b => b.key === 'memo-hash')?.lines[0].split(':')[1]?.trim() || '';
+const utf8b64 = str => { const a = te.encode(str); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+const obsUrl = (o, path) => `https://api.github.com/repos/${o.repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+const obsErr = st => new Error(st === 401 ? 'GitHub 토큰이 맞지 않거나 만료됐습니다' : (st === 403 || st === 404) ? '옵시디언 저장소에 쓸 권한이 없습니다. GitHub 토큰에 obsidian-vault 저장소와 Contents: Read and write를 추가해 주세요 (설정 ⚙ 안내 참고)' : `옵시디언 저장소 오류 (${st})`);
+async function obsGet(o, path, token) {
+  const r = await fetch(`${obsUrl(o, path)}?ref=${encodeURIComponent(o.branch)}&t=${Date.now()}`, { headers: ghHeaders(token), cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw obsErr(r.status);
+  const j = await r.json();
+  return { sha: j.sha, text: td.decode(unb64((j.content || '').replace(/\n/g, ''))) };
+}
+async function obsPut(o, path, token, text, sha, msg) {
+  const r = await fetch(obsUrl(o, path), { method: 'PUT', headers: { ...ghHeaders(token), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, content: utf8b64(text), branch: o.branch, ...(sha ? { sha } : {}) }) });
+  if (r.status === 409 || r.status === 422) return { conflict: true };
+  if (!r.ok) throw obsErr(r.status);
+  return {};
+}
+async function obsWrite(o, path, token, gen, hash, askIfUnknown) {   // → 'created' | 'updated' | 'same' | 'cancel'
+  let asked = false;
+  for (let i = 0; i < 3; i++) {
+    const cur = await obsGet(o, path, token);
+    if (cur && hash) {
+      const had = hashInNote(cur.text);
+      if (had === hash) return 'same';
+      if (!had && askIfUnknown && !asked) {
+        asked = true;
+        if (!confirm('이 노트는 앱이 만든 노트가 아닙니다 (옵시디언에서 직접 만들었거나 예전 형식).\n본문을 지금 앱 내용으로 덮어쓸까요?\n보안 같은 속성은 그대로 유지됩니다.')) return 'cancel';
+      }
+    }
+    const res = await obsPut(o, path, token, mergeNote(gen, cur?.text ?? null, hash), cur?.sha, `메모 기록: ${path.split('/').pop()}`);
+    if (!res.conflict) return cur ? 'updated' : 'created';   // 충돌(옵시디언 Git이 그사이 올림)이면 다시 읽고 재시도
+  }
+  throw new Error('옵시디언 저장소가 계속 바뀌고 있어 저장하지 못했습니다. 잠시 후 다시 눌러 주세요');
+}
+function todoNoteText(key, todo) {   // 이번 주 To do List 한 장 — export-obsidian.mjs 의 todoNote와 같은 형식
+  const nt = nLines(todo), at = new Date();
+  return ['---', `week: ${key}`, `updated: ${ymd(at)} ${hm(at)}`, `todo: ${nt}`, 'tags: [할일]', '---', '',
+    `# To do · ${key}`, '', `> 메모 앱이 매주 일요일 07:00에 자동으로 덮어씁니다 (여기서 고치지 마세요) · ${weekRange(key)}`, '',
+    ...(nt ? itemLines(todo, ' ') : ['_이번 주 To do List가 비어 있습니다._']), ''].join('\n');
+}
+let obsBusy = false;
+async function pushObsidian(key) {
+  if (obsBusy) return;
+  const token = DB.settings.token;
+  if (!token) return toast('설정(⚙)에서 GitHub 토큰을 먼저 넣어 주세요');
+  const o = obs(), folder = o.folder.replace(/^\/+|\/+$/g, ''), at = f => folder ? `${folder}/${f}` : f;
+  const btns = [$('obsNow'), $('vObs')], labels = btns.map(b => b.textContent);
+  obsBusy = true; btns.forEach(b => { b.disabled = true; b.textContent = '기록 중…'; });
+  try {
+    const has = [doneOf(key), todoOf(key), textOf(key)].some(t => t.trim());
+    const r1 = has ? await obsWrite(o, at(`${key}.md`), token, weekMarkdown(key), await sha10('v3', doneOf(key), todoOf(key), textOf(key)), true) : 'empty';
+    if (r1 === 'cancel') return toast('기록을 취소했습니다');
+    if (key === curWeek) await obsWrite(o, at('To do.md'), token, todoNoteText(key, todoOf(key)), '', false);
+    week(key).obsidianAt = now(); scheduleSave(); renderObsStamp();
+    $('vSent').textContent = `옵시디언 기록 ${fmtDT(week(key).obsidianAt)}`;
+    toast(r1 === 'empty' ? '기록할 내용이 없습니다' : r1 === 'same' ? '옵시디언 노트가 이미 최신입니다' : `옵시디언 저장소에 기록했습니다 · 옵시디언 앱에는 동기화될 때 보입니다`);
+  } catch (e) { toast(e.message); }
+  finally { obsBusy = false; btns.forEach((b, i) => { b.disabled = false; b.textContent = labels[i]; }); }
+}
+const sendObsidian = pushObsidian;
+function renderObsStamp() { const t = DB.weeks[curWeek]?.obsidianAt; $('obsStamp').textContent = t ? `옵시디언 기록 ${fmtDT(t)}` : ''; }
 function downloadMd(key) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([weekMarkdown(key)], { type: 'text/markdown' })); a.download = `${key}.md`; a.click();
@@ -764,7 +840,7 @@ $('settingsBtn').onclick = () => {
   const c = cfg(), o = obs();
   $('sRepo').value = c.repo; $('sBranch').value = c.branch; $('sPath').value = c.path;
   $('sToken').value = DB.settings.token || ''; $('sCarry').checked = DB.settings.carry !== false;
-  $('sObsVault').value = o.vault; $('sObsFolder').value = o.folder;
+  $('sObsRepo').value = o.repo; $('sObsFolder').value = o.folder;
   $('sPw1').value = $('sPw2').value = ''; $('sGid').value = c.googleClientId || '';
   refreshGStatus(); if (c.googleClientId) loadGsi().catch(() => {});
   $('settings').classList.remove('hidden');
@@ -774,7 +850,7 @@ $('sSave').onclick = async () => {
   const moved = ['repo', 'branch', 'path'].some(k => c[k] !== cfg()[k]);
   lsSet('memo.cfg', JSON.stringify(c));
   DB.settings = { ...DB.settings, token: $('sToken').value.trim(), carry: $('sCarry').checked,
-    obsidian: { vault: $('sObsVault').value.trim(), folder: $('sObsFolder').value.trim() }, updated: now() };
+    obsidian: { repo: $('sObsRepo').value.trim() || 'juno99zz-arkt/obsidian-vault', folder: $('sObsFolder').value.trim() }, updated: now() };
   $('settings').classList.add('hidden');
   if (moved) { SHA = null; await pull(); } else scheduleSave();
   toast('설정을 저장했습니다');
