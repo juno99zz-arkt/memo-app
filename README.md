@@ -53,3 +53,11 @@
 - 바뀐 일정은 옵시디언 `Inbox_Squedule/YYYYMMDD-HHMM-NOJI-변경.md`에 메타데이터만(`보안: 개인정보`, 메모 본문 제외). 첫 연결 때는 기록하지 않음.
 - 시크릿: `NOJI_CLIENT_ID`, `NOJI_CLIENT_SECRET`, `NOJI_REFRESH_TOKEN`(범위 `calendar.events`, `datastore`), `OBSIDIAN_TOKEN`
 - 처음엔 Actions → NOJI 캘린더 동기화 → Run workflow에서 「미리보기」를 체크해 무엇이 바뀔지 먼저 확인
+
+## 피클(모바일 AI) 브리핑용 요약 (`pickle-digest.yml`)
+매일 06:23(KST) 옵시디언 `2. Area of Responsibility/AI·HR/Pickle 브리핑용.md` 한 장을 갱신. 피클은 이 노트 + **구글 캘린더**만 읽으면 된다.
+- 담는 것: 이번 주·지난 주 메모장의 완료/할 일 줄과 완료율, 최근 7일 정리 리포트 한 줄 요약, 최신 리포트의 다가오는 기한
+- 안 담는 것: Memo 자유 메모 본문, 사내전용·개인정보 노트, 수집함(Inbox_*) 본문, 보안 표시가 공개·비식별이 아닌 리포트
+- 노트 자체는 `보안: 개인정보`로 표시 (외부 AI에 넘길지는 직접 판단). 완료/할 일 줄에 실명·사내 내용을 쓰지 않도록 주의
+- 시크릿은 옵시디언 자동 보관과 같음 (`MEMO_PASSWORD`, `OBSIDIAN_TOKEN`)
+

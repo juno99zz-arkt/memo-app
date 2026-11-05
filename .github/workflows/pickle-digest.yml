@@ -1,0 +1,43 @@
+# 피클(모바일 AI)용 한 주 브리핑 요약 노트를 매일 갱신 — 옵시디언 `2. Area of Responsibility/AI·HR/Pickle 브리핑용.md`
+# 필요한 설정은 옵시디언 자동 보관과 같음 (Secrets: MEMO_PASSWORD, OBSIDIAN_TOKEN)
+name: 피클 브리핑 요약
+on:
+  schedule:
+    - cron: "23 21 * * *"   # 21:23 UTC = 매일 06:23 KST (05:00 볼트 정리 이후)
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pickle-digest
+  cancel-in-progress: false
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Seoul
+      OBSIDIAN_REPO: ${{ vars.OBSIDIAN_REPO || 'juno99zz-arkt/obsidian-vault' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 옵시디언 저장소 가져오기
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.OBSIDIAN_REPO }}
+          token: ${{ secrets.OBSIDIAN_TOKEN }}
+          path: obsidian
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 요약 노트 만들기
+        env:
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+        run: node scripts/pickle-digest.mjs vault.json obsidian
+      - name: 옵시디언 저장소에 커밋
+        working-directory: obsidian
+        run: |
+          git config user.name "memo-app"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "바뀐 내용 없음"; exit 0; }
+          git commit -m "피클 브리핑용 요약: $(date +%F)"
+          git pull --rebase
+          git push
