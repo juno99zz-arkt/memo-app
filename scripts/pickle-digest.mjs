@@ -43,7 +43,7 @@ catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 �
 
 const now = new Date();
 const lines = t => String(t || '').split('\n').map(l => l.trim()).filter(Boolean)
-  .map(l => l.replace(/^(?:[-*•]\s+)?(?:\[[ xX\/-]\]\s*)?/, '').replace(/^(?:준비|진행|완료|보류)\s*[:：.\-]?\s+/, ''));
+  .map(l => l.replace(/^(?:[-*•]\s+)?(?:\[[ xX\/-]\]\s*)?/, '').replace(/^(?:준비|진행|완료|보류)\s*[:：.\-]?\s+/, '').replace(/^\d+\s*[.)]\s*/, '').trim()).filter(Boolean);   // 번호만 있는 빈 줄은 뺌
 const bullet = a => a.length ? a.map(l => `- ${l}`) : ['- 없음'];
 
 /* ── 메모장 ── */
