@@ -162,8 +162,7 @@
       <textarea id="note" spellcheck="false" placeholder="자유롭게 적으세요."></textarea>
     </section>
 
-    <div class="footrow"><span class="rate" id="rate"></span><span class="grow"></span><button class="btn" id="obsNow" type="button">옵시디언에 기록</button></div>
-    <div class="rate" id="obsStamp" style="text-align:right;margin-top:6px"></div>
+    <div class="footrow"><span class="rate" id="rate"></span></div>
 
     <h2 class="sec" id="pastHead">지난 메모장</h2>
     <div class="paper" id="pastList"></div>
@@ -219,7 +218,7 @@
     </ol>
 
     <label class="lbl">옵시디언</label>
-    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다. 바로 기록하려면 메모장 아래 「옵시디언에 기록」을 누르세요.</div>
+    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다.</div>
     <input class="field" id="sObsRepo" placeholder="옵시디언 저장소 (owner/repo)">
     <input class="field" id="sObsFolder" placeholder="폴더 (예: 2. Area of Responsibility/주간 메모)" style="margin-top:8px">
     <div class="muted small" style="margin-top:6px">「옵시디언에 기록」을 누르면 이 저장소에 바로 기록됩니다. GitHub 토큰에 이 저장소의 <b>Contents: Read and write</b> 권한이 필요합니다 (GitHub → Settings → Developer settings → Fine-grained tokens → 해당 토큰 → Repository access에 추가). 옵시디언에는 Obsidian Git이 받아오는 시점에 보입니다.</div>
@@ -623,7 +622,7 @@ async function lock() {
   for (let i = 0; saving && i < 100; i++) await new Promise(r => setTimeout(r, 100));   // 저장 중이면 끝날 때까지 기다림
   if (rev !== savedRev) await saveNow();
   KEY = null; DB = null; SHA = null;
-    $('done').value = $('todo').value = $('note').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent = $('obsStamp').textContent = '';
+    $('done').value = $('todo').value = $('note').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent;
   $('app').classList.add('hidden'); $('viewer').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
   $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
@@ -701,7 +700,6 @@ $('moveDone').onclick = () => {   // To do List에서 '완료'·[x] 표시된 �
   w.todoUpdated = w.completedUpdated = ts;
   render(true); scheduleSave(); toast(`${moved.length}건을 Completed Tasks로 옮겼습니다`);
 };
-$('obsNow').onclick = () => sendObsidian(curWeek);
 
 /* 지난 메모장 보기 (수정도 가능) */
 const growViewer = () => { autoGrow($('pastDone'), 72, 220); autoGrow($('pastTodo'), 84, 280); autoGrow($('pastNote'), window.innerHeight * 0.28); };
@@ -799,7 +797,7 @@ async function pushObsidian(key) {
   const token = DB.settings.token;
   if (!token) return toast('설정(⚙)에서 GitHub 토큰을 먼저 넣어 주세요');
   const o = obs(), folder = o.folder.replace(/^\/+|\/+$/g, ''), at = f => folder ? `${folder}/${f}` : f;
-  const btns = [$('obsNow'), $('vObs')], labels = btns.map(b => b.textContent);
+  const btns = [$('vObs')], labels = btns.map(b => b.textContent);
   obsBusy = true; btns.forEach(b => { b.disabled = true; b.textContent = '기록 중…'; });
   try {
     const has = [doneOf(key), todoOf(key), textOf(key)].some(t => t.trim());
@@ -813,7 +811,7 @@ async function pushObsidian(key) {
   finally { obsBusy = false; btns.forEach((b, i) => { b.disabled = false; b.textContent = labels[i]; }); }
 }
 const sendObsidian = pushObsidian;
-function renderObsStamp() { const t = DB.weeks[curWeek]?.obsidianAt; $('obsStamp').textContent = t ? `옵시디언 기록 ${fmtDT(t)}` : ''; }
+function renderObsStamp() {}
 function downloadMd(key) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([weekMarkdown(key)], { type: 'text/markdown' })); a.download = `${key}.md`; a.click();
