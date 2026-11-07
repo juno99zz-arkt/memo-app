@@ -123,7 +123,16 @@ try { db = await openVault(JSON.parse(readFileSync(vaultPath, 'utf8')), password
 catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 같은지 확인하세요'); process.exit(1); }
 
 const saved = db.settings?.obsidian?.folder;
-const folder = (process.env.OBSIDIAN_FOLDER || (saved && saved !== '메모/주간' ? saved : '') || '3. Area of Responsibility/주간 메모').replace(/^\/+|\/+$/g, '').replace(/^2\. Area of Responsibility(?=\/|$)/, '3. Area of Responsibility');   // 예전 기본값·예전 폴더 번호(2.)는 새 폴더(3.)로
+function migrateObsFolder(f) {   // 예전 최상위 폴더명을 새 번호 폴더로 (이미 새 이름이면 그대로, 그 밖의 폴더는 통과)
+  const T = { '0. 지식 카드': '1. 지식 카드', '1. Project': '2. Project', '2. Area of Responsibility': '3. Area of Responsibility', '3. Resource (외부지식)': '4. Resource (외부지식)', '4. 보관': '5. 보관' };
+  const K = { inbox_ai: 'Inbox_AI', inbox_mail: 'Inbox_Mail', inbox_memo: 'Inbox_memo', inbox_messenger: 'Inbox_messenger', inbox_sound: 'Inbox_sound', inbox_squedule: 'Inbox_Squedule', inbox_thinking: 'Inbox_thinking', inbox_youtube: 'Inbox_Youtube', 'inbox-youtube': 'Inbox-Youtube' };
+  const p = String(f || '').replace(/^\/+/, '').split('/'), h = p[0], lc = h.toLowerCase();
+  if (Object.hasOwn(T, h)) p[0] = T[h];
+  else if (lc === 'inbox') p[0] = '0. Inbox';
+  else if (Object.hasOwn(K, lc) || /^inbox[_-]/.test(lc)) p.splice(0, 1, '0. Inbox', Object.hasOwn(K, lc) ? K[lc] : h);
+  return p.join('/');
+}
+const folder = migrateObsFolder((process.env.OBSIDIAN_FOLDER || (saved && saved !== '메모/주간' ? saved : '') || '3. Area of Responsibility/주간 메모').replace(/^\/+|\/+$/g, ''));   // 예전 기본값·예전 최상위 폴더명은 새 폴더로 (migrateObsFolder)
 const dir = join(outRoot, folder);
 mkdirSync(dir, { recursive: true });
 const cur = isoWeek(), prev = (() => { const d = weekStart(cur); d.setDate(d.getDate() - 7); return isoWeek(d); })();
