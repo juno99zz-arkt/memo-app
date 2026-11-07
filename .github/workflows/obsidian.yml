@@ -5,7 +5,7 @@
 #   Secrets  MEMO_PASSWORD   앱 비밀번호 (앱에서 비밀번호를 바꾸면 여기도 바꿔야 함)
 #            OBSIDIAN_TOKEN  옵시디언 저장소에 쓸 수 있는 토큰 (Contents: Read and write)
 #   Variables OBSIDIAN_REPO  옵시디언 저장소 (기본 juno99zz-arkt/obsidian-vault)
-#             OBSIDIAN_FOLDER 노트 폴더 (비우면 앱 설정의 폴더, 기본 2. Area of Responsibility/주간 메모)
+#             OBSIDIAN_FOLDER 노트 폴더 (비우면 앱 설정의 폴더, 기본 3. Area of Responsibility/주간 메모)
 name: 옵시디언 자동 보관
 on:
   schedule:
