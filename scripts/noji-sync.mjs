@@ -10,7 +10,7 @@
 //  2. 구글 → NOJI: 가족 캘린더 일정 전부 + 개인 캘린더의 반복 아닌 일정을 NOJI로 가져온다(분류 없으면 개인=회사·확인 필요, 가족=가족).
 //     · 가져온 일정은 구글 원본과 제목·날짜를 서로 맞춘다(원본의 설명·알림·색은 건드리지 않음).
 //     · NOJI에서 지우면 구글 원본은 그대로 두고 다시 가져오지 않는다.
-//  3. 옵시디언 → NOJI: `00. 홈.md`의 '다가오는 기한' 표에서 날짜가 정확한 항목만 NOJI로 가져온다(다른 노트 본문은 읽지 않음).
+//  3. 옵시디언 → NOJI: `0. 홈.md`의 '다가오는 기한' 표에서 날짜가 정확한 항목만 NOJI로 가져온다(다른 노트 본문은 읽지 않음).
 //  · 양쪽에서 고친 경우 나중에 고친 쪽을 따른다(같은 날이면 NOJI 우선).
 //  · 구글에서 NOJI 일정을 지워도 NOJI에서는 지우지 않는다(다음 동기화 때 다시 생김).
 //  · 마지막 동기화 상태는 NOJI의 users/{uid}/sync/state 문서에 둔다(NOJI 앱은 이 문서를 쓰지 않음).
@@ -281,7 +281,7 @@ for (const { e, cal } of candidates) {
 }
 
 // ── ③ 옵시디언 홈 '다가오는 기한' → NOJI
-const homePath = outRoot && join(outRoot, '00. 홈.md');
+const homePath = outRoot && join(outRoot, '0. 홈.md');
 if (homePath && existsSync(homePath)) {
   for (const it of parseHome(readFileSync(homePath, 'utf8'))) {
     if (state.homeSeen[it.key] || it.date < TODAY) continue;                           // 한 번 본 항목은 다시 가져오지 않음(NOJI에서 지워도)
@@ -291,7 +291,7 @@ if (homePath && existsSync(homePath)) {
     nv.id = await nojiSave(null, nv); noji.push(nv); state.homeSeen[it.key] = nv.id;
     log('추가', '옵시디언 홈→NOJI', nv); plan.push({ label: `NOJI 추가(옵시디언 홈): ${nv.title} ${nv.date}` });
   }
-} else if (outRoot) warn.push('옵시디언 00. 홈.md를 찾지 못해 홈 기한표는 건너뜀');
+} else if (outRoot) warn.push('옵시디언 0. 홈.md를 찾지 못해 홈 기한표는 건너뜀');
 
 // ── ④ NOJI 일정 ⇄ 개인 캘린더 (NOJI가 관리하는 일정)
 const tagged = await listCal(PRIMARY, 'privateExtendedProperty=noji%3D1');
