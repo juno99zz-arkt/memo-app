@@ -123,7 +123,7 @@ try { db = await openVault(JSON.parse(readFileSync(vaultPath, 'utf8')), password
 catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 같은지 확인하세요'); process.exit(1); }
 
 const saved = db.settings?.obsidian?.folder;
-const folder = (process.env.OBSIDIAN_FOLDER || (saved && saved !== '메모/주간' ? saved : '') || '2. Area of Responsibility/주간 메모').replace(/^\/+|\/+$/g, '');   // 예전 기본값은 새 기본 폴더로
+const folder = (process.env.OBSIDIAN_FOLDER || (saved && saved !== '메모/주간' ? saved : '') || '3. Area of Responsibility/주간 메모').replace(/^\/+|\/+$/g, '').replace(/^2\. Area of Responsibility(?=\/|$)/, '3. Area of Responsibility');   // 예전 기본값·예전 폴더 번호(2.)는 새 폴더(3.)로
 const dir = join(outRoot, folder);
 mkdirSync(dir, { recursive: true });
 const cur = isoWeek(), prev = (() => { const d = weekStart(cur); d.setDate(d.getDate() - 7); return isoWeek(d); })();
