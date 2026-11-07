@@ -1,4 +1,4 @@
-# 메모 앱 내용을 옵시디언 `Inbox_memo/`에 매일 두 번(05:00 · 22:00 KST) 기록
+# 메모 앱 내용을 옵시디언 `0. Inbox/Inbox_memo/`에 매일 두 번(05:00 · 22:00 KST) 기록
 # 필요한 설정은 옵시디언 자동 보관과 같음 (Secrets: MEMO_PASSWORD, OBSIDIAN_TOKEN)
 name: 메모 → Inbox_memo
 on:
