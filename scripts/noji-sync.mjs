@@ -1,4 +1,4 @@
-// NOJI캘린더 ⇄ 구글 캘린더 양방향 동기화 + 옵시디언 홈 기한표 → NOJI, 바뀐 일정은 옵시디언 Inbox_Squedule에 기록
+// NOJI캘린더 ⇄ 구글 캘린더 양방향 동기화 + 옵시디언 홈 기한표 → NOJI, 바뀐 일정은 옵시디언 0. Inbox/Inbox_Squedule에 기록
 // GitHub Actions에서 매일 실행. 내 구글 계정 권한(리프레시 토큰)으로 동작하므로 PC가 꺼져 있어도 되고,
 // 알림(전날 09:00 · 7일 전 09:00)도 내 캘린더에 그대로 적용된다.
 //
@@ -357,15 +357,15 @@ if (!plan.length) console.log('  바뀐 일정 없음');
 for (const w of warn) console.log(`  ! ${w}`);
 if (orphans.length) console.log(`  ! NOJI에서 짝을 못 찾은 예전 캘린더 일정 ${orphans.length}개(지우지 않음): ${orphans.map(e => e.summary).join(' / ')}`);
 
-if (!DRY && outRoot && changes.length && !firstRun) {   // 옵시디언: 바뀐 일정 메타데이터만 Inbox_Squedule에
+if (!DRY && outRoot && changes.length && !firstRun) {   // 옵시디언: 바뀐 일정 메타데이터만 0. Inbox/Inbox_Squedule에
   const stamp = `${TODAY.replace(/-/g, '')}-${pad(NOW.getHours())}${pad(NOW.getMinutes())}`, cell = s => String(s ?? '').replace(/\|/g, '/').replace(/\n/g, ' ');
   const body = ['---', '보안: 개인정보', '원본: AI 초안', 'source: NOJI캘린더 자동 동기화', `수집: ${TODAY} ${hm(NOW)}`, '---', '',
     `# NOJI 일정 변경 ${TODAY}`, '', `NOJI캘린더·구글 캘린더·옵시디언 홈 사이에서 바뀐 일정입니다. 메모 등 세부 내용은 [NOJI캘린더](${APP_URL})에서 확인하세요.`, '',
     '| 변경 | 방향 | 날짜 | 분류 | 제목 | 상태 | NOJI ID |', '|---|---|---|---|---|---|---|',
     ...changes.map(c => `| ${c.변경} | ${c.방향} | ${c.날짜} | ${cell(c.분류)} | ${cell(c.제목)} | ${cell(c.상태)} | ${c.id} |`), ''];
-  mkdirSync(join(outRoot, 'Inbox_Squedule'), { recursive: true });
-  writeFileSync(join(outRoot, 'Inbox_Squedule', `${stamp}-NOJI-변경.md`), body.join('\n'));
-  console.log(`옵시디언 기록: Inbox_Squedule/${stamp}-NOJI-변경.md (${changes.length}건)`);
+  mkdirSync(join(outRoot, '0. Inbox', 'Inbox_Squedule'), { recursive: true });
+  writeFileSync(join(outRoot, '0. Inbox', 'Inbox_Squedule', `${stamp}-NOJI-변경.md`), body.join('\n'));
+  console.log(`옵시디언 기록: 0. Inbox/Inbox_Squedule/${stamp}-NOJI-변경.md (${changes.length}건)`);
 }
 if (process.env.GITHUB_STEP_SUMMARY) {
   writeFileSync(process.env.GITHUB_STEP_SUMMARY, [`### NOJI ⇄ 구글 캘린더 · 옵시디언 홈 ${DRY ? '(미리보기)' : ''}`, `NOJI ${noji.length}개 · 반영 ${plan.length}건${firstRun ? ' (첫 연결)' : ''}`, '',
