@@ -1,4 +1,4 @@
-# NOJI캘린더 ⇄ 구글 캘린더 양방향 + 옵시디언 홈 기한표 → NOJI, 매일 동기화 (바뀐 일정은 옵시디언 Inbox_Squedule에 메타데이터 기록)
+# NOJI캘린더 ⇄ 구글 캘린더 양방향 + 옵시디언 홈 기한표 → NOJI, 매일 동기화 (바뀐 일정은 옵시디언 0. Inbox/Inbox_Squedule에 메타데이터 기록)
 # 필요한 설정 (memo-app → Settings → Secrets and variables → Actions → Secrets):
 #   NOJI_CLIENT_ID / NOJI_CLIENT_SECRET  chaenggim-calendar 구글 클라우드 프로젝트의 OAuth 클라이언트
 #   NOJI_REFRESH_TOKEN                   내 구글 계정 리프레시 토큰 (범위: calendar.events, datastore)
