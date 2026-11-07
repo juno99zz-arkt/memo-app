@@ -5,8 +5,7 @@
 #   OBSIDIAN_TOKEN                       (이미 있음) 옵시디언 저장소 쓰기
 name: NOJI 캘린더 동기화
 on:
-  schedule:
-    - cron: "37 19 * * *"   # 19:37 UTC = 매일 04:37 KST (GitHub 예약은 늦어질 수 있어 이른 시각, 정각 피함)
+  # 예약 실행은 Apps Script "GH 디스패처"가 workflow_dispatch로 호출 (GitHub cron 3~6시간 지연 대응, 2026-11-08)
   workflow_dispatch:
     inputs:
       dry_run:
