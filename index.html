@@ -108,6 +108,12 @@
       <button class="gbtn" id="gBtn" type="button"><b style="color:#4285f4;font-size:18px">G</b> Google로 로그인</button>
       <div style="text-align:center;margin-top:10px"><button class="linkbtn" id="pwToggle" type="button">비밀번호로 열기</button></div>
       <div class="err" id="gErr"></div>
+      <details id="gFix" style="margin-top:12px">
+        <summary class="muted small">Google 클라이언트 ID 고치기</summary>
+        <input class="field" id="gFixIn" placeholder="123456-abc.apps.googleusercontent.com" style="margin-top:8px" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn primary" id="gFixSave" type="button" style="flex:1">저장하고 다시 시도</button><button class="btn" id="gFixClear" type="button">지우기</button></div>
+        <div class="muted small" style="margin-top:6px">클라우드 콘솔 → 사용자 인증 정보 → 웹 애플리케이션 클라이언트의 ID를 붙여 넣으세요. 앞뒤 글자가 섞여 있어도 ID만 골라냅니다. 「지우기」를 누르면 비밀번호로 열 수 있어요.</div>
+      </details>
     </div>
     <form id="lockForm" autocomplete="off">
       <label class="lbl">비밀번호</label>
@@ -529,11 +535,14 @@ function loadGsi() {
     document.head.appendChild(sc);
   }));
 }
+const GID_RE = /\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com/i;
+const normGid = t => (String(t || '').match(GID_RE) || [''])[0];   // 앞뒤 공백·따옴표·잘못 섞인 글자 제거
 function googleToken() {   // 사용자가 누른 직후에 호출해야 팝업이 막히지 않음
   return new Promise((ok, no) => {
-    const id = cfg().googleClientId;
-    if (!id) return no(new Error('Google 클라이언트 ID가 필요합니다'));
-    if (!/^\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(id)) return no(new Error('클라이언트 ID 형식이 올바르지 않습니다. 숫자-글자.apps.googleusercontent.com 전체를 복사 버튼으로 복사해 설정의 Google 클라이언트 ID에 다시 붙여 넣으세요 (프로젝트 ID·클라이언트 보안 비밀이 아닙니다)'));
+    const raw = cfg().googleClientId, id = normGid(raw);
+    if (!raw) return no(new Error('Google 클라이언트 ID가 필요합니다'));
+    if (!id) { const e = new Error('저장된 클라이언트 ID가 올바르지 않습니다. 아래 「클라이언트 ID 고치기」에 다시 붙여 넣으세요.'); e.badId = true; return no(e); }
+    if (id !== raw) lsSet('memo.cfg', JSON.stringify({ ...cfg(), googleClientId: id }));
     if (!window.google?.accounts?.oauth2) return no(new Error('Google 스크립트를 아직 불러오는 중입니다. 잠시 후 다시 눌러 주세요'));
     google.accounts.oauth2.initTokenClient({
       client_id: id, scope: G_SCOPE,
@@ -579,10 +588,19 @@ async function googleLogin() {
     await unlockWith(picked, '', 'Google 열쇠로 열 수 없습니다. 비밀번호로 열고 연결을 갱신해 주세요.');
     lsSet('memo.gLinked', '1');
     googleEmail(tk).then(m => m && lsSet('memo.gEmail', m));
-  } catch (ex) { err.textContent = ex.message; }
+  } catch (ex) {
+    err.textContent = ex.message;
+    if (ex.badId) { $('gFix').open = true; $('gFixIn').value = cfg().googleClientId || ''; setTimeout(() => $('gFixIn').focus(), 50); }
+  }
   finally { $('gBtn').disabled = false; }
 }
 $('gBtn').onclick = googleLogin;
+$('gFixSave').onclick = () => {
+  const id = normGid($('gFixIn').value);
+  if (!id) { $('gErr').textContent = '올바른 클라이언트 ID가 아닙니다. 숫자-글자.apps.googleusercontent.com 형태여야 합니다.'; return; }
+  lsSet('memo.cfg', JSON.stringify({ ...cfg(), googleClientId: id })); $('gFix').open = false; googleLogin();
+};
+$('gFixClear').onclick = () => { lsSet('memo.cfg', JSON.stringify({ ...cfg(), googleClientId: '' })); $('gErr').textContent = ''; pwMode = true; applyLockMode(); };
 $('pwToggle').onclick = () => { pwMode = true; applyLockMode(); setTimeout(() => $('pw').focus(), 50); };
 
 function refreshGStatus() {
