@@ -226,7 +226,7 @@
     <label class="lbl">옵시디언</label>
     <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다.</div>
     <input class="field" id="sObsRepo" placeholder="옵시디언 저장소 (owner/repo)">
-    <input class="field" id="sObsFolder" placeholder="폴더 (예: 2. Area of Responsibility/주간 메모)" style="margin-top:8px">
+    <input class="field" id="sObsFolder" placeholder="폴더 (예: 3. Area of Responsibility/주간 메모)" style="margin-top:8px">
     <div class="muted small" style="margin-top:6px">「옵시디언에 기록」을 누르면 이 저장소에 바로 기록됩니다. GitHub 토큰에 이 저장소의 <b>Contents: Read and write</b> 권한이 필요합니다 (GitHub → Settings → Developer settings → Fine-grained tokens → 해당 토큰 → Repository access에 추가). 옵시디언에는 Obsidian Git이 받아오는 시점에 보입니다.</div>
 
     <label class="lbl">GitHub 동기화</label>
@@ -343,8 +343,8 @@ let KEY = null, SALT = null, ITER = KDF_ITER, SHA = null;
 let DB = null, curWeek = isoWeek(), dirty = false, saving = false, saveTimer = null, viewWeek = null;
 let rev = 0, savedRev = 0;   // 고친 횟수 / 저장 끝난 횟수 — 저장하는 동안 또 고친 내용을 놓치지 않기 위함
 
-function emptyDB() { return { v: 2, settings: { token: '', carry: true, obsidian: { vault: '', folder: '2. Area of Responsibility/주간 메모' }, updated: now() }, weeks: {} }; }
-function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '2. Area of Responsibility/주간 메모'; return o; }   // 예전 기본값은 새 기본 폴더로
+function emptyDB() { return { v: 2, settings: { token: '', carry: true, obsidian: { vault: '', folder: '3. Area of Responsibility/주간 메모' }, updated: now() }, weeks: {} }; }
+function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '3. Area of Responsibility/주간 메모'; o.folder = o.folder.replace(/^\/+/, '').replace(/^2\. Area of Responsibility(?=\/|$)/, '3. Area of Responsibility'); return o; }   // 예전 기본값·예전 폴더 번호(2.)는 새 폴더(3.)로
 function week(key) { return DB.weeks[key] || (DB.weeks[key] = { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '' }); }
 const textOf = key => DB.weeks[key]?.text || '';        // Memo
 const todoOf = key => DB.weeks[key]?.todo || '';        // To do List
