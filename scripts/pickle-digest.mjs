@@ -1,7 +1,7 @@
 // 피클(모바일 AI)이 읽을 "한 주 브리핑용" 요약 노트를 만든다 — 노트 한 장만 읽으면 되도록
 //   · 이번 주·지난 주 메모장: 완료 / 할 일 줄 (Memo 자유 메모 본문은 넣지 않음)
 //   · 최근 7일 정리 리포트: 한 줄 요약 + 최신 리포트의 다음 기한 (보안이 공개·비식별인 리포트만)
-// 구글 캘린더는 피클이 직접 읽는다. 사내전용·개인정보 노트와 수집함(Inbox_*) 본문은 읽지 않는다.
+// 구글 캘린더는 피클이 직접 읽는다. 사내전용·개인정보 노트와 수집함(0. Inbox/Inbox_*) 본문은 읽지 않는다.
 // 사용: MEMO_PASSWORD=... node scripts/pickle-digest.mjs <vault.json> <옵시디언 저장소 폴더>
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -58,7 +58,7 @@ function weekBlock(key, title) {
 /* ── 정리 리포트 (보안이 공개·비식별인 것만) ── */
 const frontOf = t => (t.match(/^---\r?\n([\s\S]*?)\r?\n---/) || [])[1] || '';
 const plain = s => s.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, '$1');
-const repDir = join(outRoot, '2. Area of Responsibility', 'AI·HR', '정리 리포트');
+const repDir = join(outRoot, '3. Area of Responsibility', 'AI·HR', '정리 리포트');
 const since = new Date(now); since.setDate(since.getDate() - DAYS); const sinceStr = ymd(since);
 const reports = existsSync(repDir) ? readdirSync(repDir).filter(f => /^\d{4}-\d{2}-\d{2} 정리 리포트\.md$/.test(f) && f.slice(0, 10) >= sinceStr).sort() : [];
 const sum = [], skipped = [];
@@ -80,7 +80,7 @@ const out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinut
   ...(topDue ? [`## 다가오는 기한 (${latest} 리포트 기준)`, '', topDue, ''] : []),
   ...(skipped.length ? [`_보안 표시가 없어 건너뛴 리포트: ${skipped.join(', ')}_`, ''] : [])].join('\n');
 
-const dir = join(outRoot, '2. Area of Responsibility', 'AI·HR');
+const dir = join(outRoot, '3. Area of Responsibility', 'AI·HR');
 mkdirSync(dir, { recursive: true });
 writeFileSync(join(dir, 'Pickle 브리핑용.md'), out);
-console.log(`작성: 2. Area of Responsibility/AI·HR/Pickle 브리핑용.md (메모 ${cur}·${prev}, 리포트 ${sum.length}건)`);
+console.log(`작성: 3. Area of Responsibility/AI·HR/Pickle 브리핑용.md (메모 ${cur}·${prev}, 리포트 ${sum.length}건)`);
