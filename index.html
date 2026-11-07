@@ -344,7 +344,16 @@ let DB = null, curWeek = isoWeek(), dirty = false, saving = false, saveTimer = n
 let rev = 0, savedRev = 0;   // 고친 횟수 / 저장 끝난 횟수 — 저장하는 동안 또 고친 내용을 놓치지 않기 위함
 
 function emptyDB() { return { v: 2, settings: { token: '', carry: true, obsidian: { vault: '', folder: '3. Area of Responsibility/주간 메모' }, updated: now() }, weeks: {} }; }
-function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '3. Area of Responsibility/주간 메모'; o.folder = o.folder.replace(/^\/+/, '').replace(/^2\. Area of Responsibility(?=\/|$)/, '3. Area of Responsibility'); return o; }   // 예전 기본값·예전 폴더 번호(2.)는 새 폴더(3.)로
+function migrateObsFolder(f) {   // 예전 최상위 폴더명을 새 번호 폴더로 (이미 새 이름이면 그대로, 그 밖의 폴더는 통과)
+  const T = { '0. 지식 카드': '1. 지식 카드', '1. Project': '2. Project', '2. Area of Responsibility': '3. Area of Responsibility', '3. Resource (외부지식)': '4. Resource (외부지식)', '4. 보관': '5. 보관' };
+  const K = { inbox_ai: 'Inbox_AI', inbox_mail: 'Inbox_Mail', inbox_memo: 'Inbox_memo', inbox_messenger: 'Inbox_messenger', inbox_sound: 'Inbox_sound', inbox_squedule: 'Inbox_Squedule', inbox_thinking: 'Inbox_thinking', inbox_youtube: 'Inbox_Youtube', 'inbox-youtube': 'Inbox-Youtube' };
+  const p = String(f || '').replace(/^\/+/, '').split('/'), h = p[0], lc = h.toLowerCase();
+  if (Object.hasOwn(T, h)) p[0] = T[h];
+  else if (lc === 'inbox') p[0] = '0. Inbox';
+  else if (Object.hasOwn(K, lc) || /^inbox[_-]/.test(lc)) p.splice(0, 1, '0. Inbox', Object.hasOwn(K, lc) ? K[lc] : h);
+  return p.join('/');
+}
+function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '3. Area of Responsibility/주간 메모'; o.folder = migrateObsFolder(o.folder); return o; }   // 예전 기본값·예전 최상위 폴더명은 새 폴더로
 function week(key) { return DB.weeks[key] || (DB.weeks[key] = { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '' }); }
 const textOf = key => DB.weeks[key]?.text || '';        // Memo
 const todoOf = key => DB.weeks[key]?.todo || '';        // To do List
