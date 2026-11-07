@@ -1,4 +1,4 @@
-// 메모 앱 내용을 옵시디언 `Inbox_memo/`에 기록 — GitHub Actions에서 매일 05:00·22:00(KST) 실행
+// 메모 앱 내용을 옵시디언 `0. Inbox/Inbox_memo/`에 기록 — GitHub Actions에서 매일 05:00·22:00(KST) 실행
 //   주마다 노트 한 장 `YYYY-Www 메모.md` (Completed Tasks · To do List · Memo 전체 본문). 내용이 바뀐 경우에만 다시 씀
 // 사용: MEMO_PASSWORD=... node scripts/inbox-memo.mjs <vault.json> <옵시디언 저장소 폴더>
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { webcrypto as crypto, createHash } from 'node:crypto';
 
 const [vaultPath, outRoot] = process.argv.slice(2);
-const password = process.env.MEMO_PASSWORD, FOLDER = process.env.INBOX_MEMO_FOLDER || 'Inbox_memo';
+const password = process.env.MEMO_PASSWORD, FOLDER = process.env.INBOX_MEMO_FOLDER || '0. Inbox/Inbox_memo';
 if (!vaultPath || !outRoot) { console.error('사용: node inbox-memo.mjs <vault.json> <옵시디언 폴더>'); process.exit(2); }
 if (!password) { console.error('MEMO_PASSWORD 시크릿이 없습니다'); process.exit(2); }
 
