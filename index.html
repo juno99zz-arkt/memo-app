@@ -533,6 +533,7 @@ function googleToken() {   // 사용자가 누른 직후에 호출해야 팝업�
   return new Promise((ok, no) => {
     const id = cfg().googleClientId;
     if (!id) return no(new Error('Google 클라이언트 ID가 필요합니다'));
+    if (!/^\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(id)) return no(new Error('클라이언트 ID 형식이 올바르지 않습니다. 숫자-글자.apps.googleusercontent.com 전체를 복사 버튼으로 복사해 설정의 Google 클라이언트 ID에 다시 붙여 넣으세요 (프로젝트 ID·클라이언트 보안 비밀이 아닙니다)'));
     if (!window.google?.accounts?.oauth2) return no(new Error('Google 스크립트를 아직 불러오는 중입니다. 잠시 후 다시 눌러 주세요'));
     google.accounts.oauth2.initTokenClient({
       client_id: id, scope: G_SCOPE,
