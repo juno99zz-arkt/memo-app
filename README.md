@@ -2,11 +2,11 @@
 
 비밀번호로 잠긴 개인 주간 메모장 — https://juno99zz-arkt.github.io/memo-app/
 
-- **한 주 = 메모장 하나, 칸 셋**: **Completed Tasks**(끝낸 일) · **To do List**(할 일) · **Memo**(자유 메모, 가장 크게). 입력을 멈추면 자동 저장
+- **한 주 = 메모장 하나, 칸 넷**: **Completed Tasks**(끝낸 일) · **To do List**(할 일) · **Refer**(참고 자료) · **Thinking**(생각). 입력을 멈추면 자동 저장. 예전 Memo 칸 내용은 Refer로 그대로 옮겨져 있음
 - **완료한 줄 옮기기**: To do List에서 끝낸 줄 앞에 `완료`(또는 `- [x]`)를 쓰고 버튼을 누르면 Completed Tasks로 이동
-- **월요일 05:00**: 새 주가 열리고, To do List의 못 끝낸 줄(+예전 방식으로 Memo에 `준비`·`진행`으로 쓴 줄)이 새 To do List 맨 위로 이월. Completed Tasks·Memo는 새로 시작
+- **월요일 05:00**: 새 주가 열리고, To do List의 못 끝낸 줄(+예전 방식으로 Memo에 `준비`·`진행`으로 쓴 줄)이 새 To do List 맨 위로 이월. Completed Tasks · Refer · Thinking은 새로 시작
 - **지난 메모장**: 아래 목록에서 열어 보기·수정, 옵시디언으로 보내기(`obsidian://`) / .md 저장 / 요약 복사(한 줄 26자 이내)
-- **옵시디언 자동 기록**: Actions가 매주 일요일 07:00(KST) 비공개 옵시디언 저장소에 커밋 — 이번 주 노트 `YYYY-Www.md`(Completed Tasks · To do List · Memo 세 칸), 지난 주 노트(새 형식으로 이미 있고 앱 내용이 바뀐 경우만 갱신), `To do.md`(이번 주 할 일). 예전 형식 노트는 건드리지 않음. 앱의 「옵시디언에 기록」 버튼은 GitHub API로 옵시디언 저장소에 **바로** 기록(이번 주 노트 + `To do.md`, 지난 메모장에서는 그 주 노트). 같은 형식·같은 보호 규칙(속성 보존, 앱 내용이 같으면 그대로 둠)을 쓰고, 앱이 만들지 않은 노트는 덮어쓰기 전에 확인. **앱의 GitHub 토큰에 obsidian-vault 저장소와 Contents: Read and write 권한이 필요** → 옵시디언의 Obsidian Git 플러그인이 받아옴 (아래 설정 참고)
+- **옵시디언 자동 기록**: Actions가 매주 일요일 07:00(KST) 비공개 옵시디언 저장소에 커밋 — 이번 주 노트 `YYYY-Www.md`(Completed Tasks · To do List · Refer 세 칸), 지난 주 노트(새 형식으로 이미 있고 앱 내용이 바뀐 경우만 갱신), `To do.md`(이번 주 할 일). 예전 형식 노트는 건드리지 않음. 앱의 「옵시디언에 기록」 버튼은 GitHub API로 옵시디언 저장소에 **바로** 기록(이번 주 노트 + `To do.md`, 지난 메모장에서는 그 주 노트). 같은 형식·같은 보호 규칙(속성 보존, 앱 내용이 같으면 그대로 둠)을 쓰고, 앱이 만들지 않은 노트는 덮어쓰기 전에 확인. **앱의 GitHub 토큰에 obsidian-vault 저장소와 Contents: Read and write 권한이 필요** → 옵시디언의 Obsidian Git 플러그인이 받아옴 (아래 설정 참고)
 - **Google 로그인**: 메모를 푸는 열쇠를 내 Google 드라이브의 숨김 앱 폴더(`appDataFolder`)에 보관하고, Google 로그인으로 꺼내 연다. 비밀번호는 복구용·옵시디언 자동 보관용으로 유지 (아래 설정 참고)
 - **스마트폰 앱**: PWA — 아이폰 Safari 공유→홈 화면에 추가 / 안드로이드 Chrome ⋮→앱 설치
 - **보안**: 브라우저에서 PBKDF2(60만 회)+AES-256-GCM 암호화 후 `vault.json`(main)에 저장 — 저장소에는 암호문만 올라감. 비밀번호를 잊으면 복구 불가.
@@ -57,10 +57,14 @@
 ## 피클(모바일 AI) 브리핑용 요약 (`pickle-digest.yml`)
 매일 06:23(KST) 옵시디언 `3. Area of Responsibility/AI·HR/Pickle 브리핑용.md` 한 장을 갱신. 피클은 이 노트 + **구글 캘린더**만 읽으면 된다.
 - 담는 것: 이번 주·지난 주 메모장의 완료/할 일 줄과 완료율, 최근 7일 정리 리포트 한 줄 요약, 최신 리포트의 다가오는 기한
-- 안 담는 것: Memo 자유 메모 본문, 사내전용·개인정보 노트, 수집함(0. Inbox/Inbox_*) 본문, 보안 표시가 공개·비식별이 아닌 리포트
+- 안 담는 것: Refer·Thinking 본문, 사내전용·개인정보 노트, 수집함(0. Inbox/Inbox_*) 본문, 보안 표시가 공개·비식별이 아닌 리포트
 - 노트 자체는 `보안: 개인정보`로 표시 (외부 AI에 넘길지는 직접 판단). 완료/할 일 줄에 실명·사내 내용을 쓰지 않도록 주의
 - 시크릿은 옵시디언 자동 보관과 같음 (`MEMO_PASSWORD`, `OBSIDIAN_TOKEN`)
 
-## 메모 → 옵시디언 `0. Inbox/Inbox_memo` (`inbox-memo.yml`)
-매일 05:00 · 22:00(KST, GitHub 예약이라 늦어질 수 있음) 이번 주·지난 주 메모 내용을 `0. Inbox/Inbox_memo/YYYY-Www 메모.md`로 기록 (Completed Tasks · To do List · **Memo 본문 전체**). 내용이 바뀐 경우에만 다시 쓰고, 앱 사본이라 옵시디언에서 고치지 않는다. 옵시디언에서 붙인 속성(`보안` 등)은 보존. 노트는 `보안: 개인정보`로 표시. 시크릿은 옵시디언 자동 보관과 같음.
-
+## 메모 → 옵시디언 `Inbox_memo` · `Inbox_thinking` (`inbox-memo.yml`)
+매일 05:00 · 22:00(KST) 이번 주·지난 주 내용을 두 곳에 나눠 기록 (실행은 Apps Script "GH 디스패처"가 호출).
+- `0. Inbox/Inbox_memo/YYYY-Www 메모.md` — **Completed Tasks · To do List · Refer**
+- `0. Inbox/Inbox_thinking/YYYY-Www Thinking.md` — **Thinking** (내 문장 그대로)
+- 내용이 바뀐 경우에만 다시 쓰고, 옵시디언에서 붙인 속성(`보안` 등)은 보존. 노트는 `보안: 개인정보`, 앱 사본이라 옵시디언에서 고치지 않는다.
+- 정리 루틴이 노트를 다른 폴더로 옮겨도 `memo-app: memo|thinking` + `week` 속성으로 찾아 그 자리에서 갱신 (옮겨진 뒤 새 사본이 또 생기지 않음). 노트를 지우면 다음 실행에 다시 만들어짐.
+- 시크릿은 옵시디언 자동 보관과 같음 (`MEMO_PASSWORD`, `OBSIDIAN_TOKEN`)
