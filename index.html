@@ -50,13 +50,14 @@
 
   /* 메모장 */
   .paper { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-  /* 세 칸 카드: Completed Tasks · To do List · Memo */
+  /* 네 칸 카드: Completed Tasks · To do List · Refer · Thinking */
   .stamp { text-align: center; font-size: 12px; color: #9ca3af; margin: 10px 0 0; min-height: 16px; }
   .card { --ca: #6b7280; --cb: var(--line); --cbg: var(--paper); --ch: #fafafa;
           background: var(--cbg); border: 1px solid var(--cb); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-top: 16px; overflow: hidden; }
   .card.c-done { --ca: #15803d; --cb: #bfe5cd; --cbg: #fcfefd; --ch: #d6f0df; }
   .card.c-todo { --ca: #1d4ed8; --cb: #bfd3f5; --cbg: #fcfdff; --ch: #d9e6fb; }
   .card.c-memo { --ca: #a16207; --cb: #ecd9a6; --cbg: #fffefb; --ch: #fbecc4; }
+  .card.c-think { --ca: #6d28d9; --cb: #d6c8f3; --cbg: #fdfcff; --ch: #e7ddfa; }
   .chead { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--ch); border-bottom: 1px solid var(--cb); }
   .pill { font-size: 13px; font-weight: 800; color: var(--ca); letter-spacing: .01em; }
   .cnt { font-size: 12px; font-weight: 600; color: var(--ca); opacity: .75; }
@@ -64,7 +65,7 @@
   .mini-btn:hover { background: var(--ch); }
   .card textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; padding: 12px 16px 16px; font-size: 15px; line-height: 1.75; }
   .card textarea::placeholder { color: #b8bcc3; }
-  #done { min-height: 84px; } #todo { min-height: 110px; } #note { min-height: 42vh; font-size: 16px; }
+  #done { min-height: 84px; } #todo { min-height: 110px; } #note { min-height: 24vh; font-size: 16px; } #think { min-height: 28vh; font-size: 16px; }
   .footrow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   .rate { font-size: 12px; color: var(--muted); }
 
@@ -88,7 +89,7 @@
   .sheet-bg { position: fixed; inset: 0; background: rgba(31,35,40,.28); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
   .sheet { width: 100%; max-width: 680px; max-height: 94vh; overflow-y: auto; background: var(--bg); border-radius: 16px 16px 0 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
   @media (min-width: 720px) { .sheet-bg { align-items: center; } .sheet { border-radius: 16px; } }
-  #pastDone { min-height: 72px; } #pastTodo { min-height: 84px; } #pastNote { min-height: 28vh; }
+  #pastDone { min-height: 72px; } #pastTodo { min-height: 84px; } #pastNote { min-height: 16vh; } #pastThink { min-height: 16vh; }
   .toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 16px; border-radius: 10px; z-index: 30; font-size: 13px; max-width: 90vw; }
   .gbtn { width: 100%; padding: 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
   .gbtn:hover { background: var(--soft); }
@@ -164,8 +165,12 @@
 끝낸 줄은 앞에 '완료'를 붙이면 옮길 수 있어요"></textarea>
     </section>
     <section class="card c-memo">
-      <div class="chead"><span class="pill pill-memo">Memo</span></div>
-      <textarea id="note" spellcheck="false" placeholder="자유롭게 적으세요."></textarea>
+      <div class="chead"><span class="pill pill-memo">Refer</span></div>
+      <textarea id="note" spellcheck="false" placeholder="참고할 자료·링크·내용을 적으세요."></textarea>
+    </section>
+    <section class="card c-think">
+      <div class="chead"><span class="pill pill-think">Thinking</span></div>
+      <textarea id="think" spellcheck="false" placeholder="떠오르는 생각을 자유롭게 적으세요."></textarea>
     </section>
 
     <div class="footrow"><span class="rate" id="rate"></span></div>
@@ -191,8 +196,12 @@
       <textarea id="pastTodo" spellcheck="false"></textarea>
     </section>
     <section class="card c-memo">
-      <div class="chead"><span class="pill pill-memo">Memo</span></div>
+      <div class="chead"><span class="pill pill-memo">Refer</span></div>
       <textarea id="pastNote" spellcheck="false"></textarea>
+    </section>
+    <section class="card c-think">
+      <div class="chead"><span class="pill pill-think">Thinking</span></div>
+      <textarea id="pastThink" spellcheck="false"></textarea>
     </section>
     <div class="row" style="margin-top:12px;flex-wrap:wrap">
       <button class="btn" id="vObs">옵시디언에 기록</button>
@@ -210,10 +219,10 @@
 
     <label class="lbl">쓰는 방법</label>
     <ol class="guide">
-      <li><b>Completed Tasks</b> 이번 주 끝낸 일을 한 줄씩 · <b>To do List</b> 해야 할 일을 한 줄씩 · <b>Memo</b> 자유 메모</li>
+      <li><b>Completed Tasks</b> 이번 주 끝낸 일을 한 줄씩 · <b>To do List</b> 해야 할 일을 한 줄씩 · <b>Refer</b> 참고 자료 · <b>Thinking</b> 생각</li>
       <li>To do List에서 끝낸 줄은 앞에 <code>완료</code>를 쓰거나 <code>- [x]</code>로 바꾼 뒤 <b>✓ 완료한 줄 옮기기</b>를 누르면 Completed Tasks로 이동합니다</li>
-      <li>월요일 05:00에 새 주가 열리고, To do List에서 못 끝낸 줄은 새 주 To do List로 넘어갑니다 (Completed Tasks와 Memo는 새로 시작)</li>
-      <li>세 칸 모두 매주 일요일 07:00에 옵시디언 노트(<code>폴더/2026-W44.md</code>)로 기록됩니다</li>
+      <li>월요일 05:00에 새 주가 열리고, To do List에서 못 끝낸 줄은 새 주 To do List로 넘어갑니다 (Completed Tasks · Refer · Thinking은 새로 시작)</li>
+      <li>Completed Tasks · To do List · Refer는 옵시디언 <code>Inbox_memo</code>에, Thinking은 <code>Inbox_thinking</code>에 매일 05:00·22:00 기록됩니다 (일요일 07:00에는 주간 노트 <code>폴더/2026-W44.md</code>도 기록)</li>
     </ol>
 
     <label class="lbl">스마트폰 앱으로 설치</label>
@@ -224,7 +233,7 @@
     </ol>
 
     <label class="lbl">옵시디언</label>
-    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Memo가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다.</div>
+    <div class="muted small" style="margin-bottom:8px">매주 일요일 07:00에 이번 주 Completed Tasks · To do List · Refer가 옵시디언 저장소의 <code>폴더/2026-W44.md</code>로 기록되고, <code>폴더/To do.md</code>는 이번 주 할 일로 갱신됩니다.</div>
     <input class="field" id="sObsRepo" placeholder="옵시디언 저장소 (owner/repo)">
     <input class="field" id="sObsFolder" placeholder="폴더 (예: 3. Area of Responsibility/주간 메모)" style="margin-top:8px">
     <div class="muted small" style="margin-top:6px">「옵시디언에 기록」을 누르면 이 저장소에 바로 기록됩니다. GitHub 토큰에 이 저장소의 <b>Contents: Read and write</b> 권한이 필요합니다 (GitHub → Settings → Developer settings → Fine-grained tokens → 해당 토큰 → Repository access에 추가). 옵시디언에는 Obsidian Git이 받아오는 시점에 보입니다.</div>
@@ -338,7 +347,7 @@ async function ghWrite(token, file, sha, msg) {
 
 /* ───────── 데이터 ─────────
    { v:2, settings:{token,carry,obsidian:{vault,folder},updated},
-     weeks:{ 'YYYY-Www': { completed(Completed Tasks), completedUpdated, todo(To do List), todoUpdated, text(Memo), updated, closedAt, carriedFrom, obsidianAt } } }   — 한 주 = 메모장 하나(칸 3개) */
+     weeks:{ 'YYYY-Www': { completed(Completed Tasks), completedUpdated, todo(To do List), todoUpdated, text(Refer), updated, thinking, thinkingUpdated, closedAt, carriedFrom, obsidianAt } } }   — 한 주 = 메모장 하나(칸 4개: Completed · To do · Refer(text) · Thinking) */
 let KEY = null, SALT = null, ITER = KDF_ITER, SHA = null;
 let DB = null, curWeek = isoWeek(), dirty = false, saving = false, saveTimer = null, viewWeek = null;
 let rev = 0, savedRev = 0;   // 고친 횟수 / 저장 끝난 횟수 — 저장하는 동안 또 고친 내용을 놓치지 않기 위함
@@ -354,15 +363,16 @@ function migrateObsFolder(f) {   // 예전 최상위 폴더명을 새 번호 폴
   return p.join('/');
 }
 function obs() { const o = { repo: 'juno99zz-arkt/obsidian-vault', branch: 'main', ...(DB.settings.obsidian || {}) }; if (!o.repo) o.repo = 'juno99zz-arkt/obsidian-vault'; if (!o.folder || o.folder === '메모/주간') o.folder = '3. Area of Responsibility/주간 메모'; o.folder = migrateObsFolder(o.folder); return o; }   // 예전 기본값·예전 최상위 폴더명은 새 폴더로
-function week(key) { return DB.weeks[key] || (DB.weeks[key] = { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '' }); }
-const textOf = key => DB.weeks[key]?.text || '';        // Memo
+function week(key) { return DB.weeks[key] || (DB.weeks[key] = { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '', thinking: '', thinkingUpdated: '' }); }
+const textOf = key => DB.weeks[key]?.text || '';        // Refer (예전 Memo 내용 그대로)
+const thinkOf = key => DB.weeks[key]?.thinking || '';   // Thinking
 const todoOf = key => DB.weeks[key]?.todo || '';        // To do List
 const doneOf = key => DB.weeks[key]?.completed || '';   // Completed Tasks
-const allOf = key => [doneOf(key), todoOf(key), textOf(key)].filter(Boolean).join('\n');   // 내용이 있는 주인지 볼 때
+const allOf = key => [doneOf(key), todoOf(key), textOf(key), thinkOf(key)].filter(Boolean).join('\n');   // 내용이 있는 주인지 볼 때
 
 /* 이전 버전(메모 여러 개·항목 목록)을 주별 메모장 텍스트로 변환 */
 function migrateWeek(w) {
-  if (!w) return { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '' };
+  if (!w) return { text: '', updated: '', todo: '', todoUpdated: '', completed: '', completedUpdated: '', thinking: '', thinkingUpdated: '' };
   if (typeof w.text !== 'string' && Array.isArray(w.memos)) {
     const live = w.memos.filter(m => !m.deleted);
     const text = live.map(m => [m.title, ...(m.items || []).filter(i => i.text?.trim()).map(i => `${ST[i.status] || '준비'} ${i.text.trim()}`), m.note?.trim()].filter(Boolean).join('\n')).join('\n\n');
@@ -373,6 +383,7 @@ function migrateWeek(w) {
   }
   if (typeof w.todo !== 'string') { w.todo = ''; w.todoUpdated = w.todoUpdated || ''; }   // 예전 메모장은 전부 Memo로
   if (typeof w.completed !== 'string') { w.completed = ''; w.completedUpdated = w.completedUpdated || ''; }
+  if (typeof w.thinking !== 'string') { w.thinking = ''; w.thinkingUpdated = w.thinkingUpdated || ''; }
   return w;
 }
 function migrateDB(d) { for (const k of Object.keys(d.weeks || {})) d.weeks[k] = migrateWeek(d.weeks[k]); d.weeks = d.weeks || {}; d.v = 2; return d; }
@@ -388,6 +399,8 @@ function mergeDB(a, b) {
     w.todo = newerTodo.todo || ''; w.todoUpdated = newerTodo.todoUpdated || '';
     const newerDone = (wa.completedUpdated || '') >= (wb.completedUpdated || '') ? wa : wb;
     w.completed = newerDone.completed || ''; w.completedUpdated = newerDone.completedUpdated || '';
+    const newerThink = (wa.thinkingUpdated || '') >= (wb.thinkingUpdated || '') ? wa : wb;
+    w.thinking = newerThink.thinking || ''; w.thinkingUpdated = newerThink.thinkingUpdated || '';
     const closed = [wa.closedAt, wb.closedAt].filter(Boolean).sort()[0]; if (closed) w.closedAt = closed;
     const sent = [wa.obsidianAt, wb.obsidianAt].filter(Boolean).sort().pop(); if (sent) w.obsidianAt = sent;
     const carried = wa.carriedFrom || wb.carriedFrom; if (carried) w.carriedFrom = carried;
@@ -650,7 +663,7 @@ async function lock() {
   for (let i = 0; saving && i < 100; i++) await new Promise(r => setTimeout(r, 100));   // 저장 중이면 끝날 때까지 기다림
   if (rev !== savedRev) await saveNow();
   KEY = null; DB = null; SHA = null;
-    $('done').value = $('todo').value = $('note').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent;
+    $('done').value = $('todo').value = $('note').value = $('think').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = $('pastThink').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent = '';
   $('app').classList.add('hidden'); $('viewer').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
   $('newOnly').classList.add('hidden'); $('pw2').required = false; $('unlockBtn').textContent = '열기';
@@ -682,10 +695,10 @@ function rollover() {
 
 /* ───────── 화면 ───────── */
 function autoGrow(el, min, max = Infinity) { el.style.height = 'auto'; el.style.height = Math.min(max, Math.max(el.scrollHeight, min)) + 'px'; }
-const growDone = el => autoGrow(el, 84, 240), growTodo = el => autoGrow(el, 110, 340), growNote = () => autoGrow($('note'), window.innerHeight * 0.42);
+const growDone = el => autoGrow(el, 84, 240), growTodo = el => autoGrow(el, 110, 340), growNote = () => autoGrow($('note'), window.innerHeight * 0.24), growThink = () => autoGrow($('think'), window.innerHeight * 0.28);
 const nLines = t => String(t || '').split('\n').filter(l => l.trim()).length;
 const rateOfN = (nd, nt) => nd + nt ? Math.round(nd / (nd + nt) * 100) : 0;
-const lastEdit = key => [DB.weeks[key]?.updated, DB.weeks[key]?.todoUpdated, DB.weeks[key]?.completedUpdated].filter(Boolean).sort().pop() || '';
+const lastEdit = key => [DB.weeks[key]?.updated, DB.weeks[key]?.todoUpdated, DB.weeks[key]?.completedUpdated, DB.weeks[key]?.thinkingUpdated].filter(Boolean).sort().pop() || '';
 const fmtKR = iso => { const d = new Date(iso), h = d.getHours(); return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`; };
 function renderCounts() {
   const nd = nLines($('done').value), nt = nLines($('todo').value);
@@ -699,8 +712,8 @@ function render(force) {
   if (!DB) return;
   $('wkTitle').textContent = `${curWeek} 메모장`;
   $('wkRange').textContent = weekRange(curWeek);
-  for (const [id, get] of [['done', doneOf], ['todo', todoOf], ['note', textOf]]) { const el = $(id); if (force || (document.activeElement !== el && el.value !== get(curWeek))) el.value = get(curWeek); }
-  growDone($('done')); growTodo($('todo')); growNote();
+  for (const [id, get] of [['done', doneOf], ['todo', todoOf], ['note', textOf], ['think', thinkOf]]) { const el = $(id); if (force || (document.activeElement !== el && el.value !== get(curWeek))) el.value = get(curWeek); }
+  growDone($('done')); growTodo($('todo')); growNote(); growThink();
   renderCounts(); renderObsStamp();
 
   const past = Object.keys(DB.weeks).filter(k => k < curWeek && allOf(k).trim()).sort().reverse();
@@ -714,7 +727,7 @@ function render(force) {
 }
 
 // 세 칸 입력: 멈추고 2.5초 뒤 자동 저장
-const FIELDS = { done: ['completed', 'completedUpdated', growDone], todo: ['todo', 'todoUpdated', growTodo], note: ['text', 'updated', () => growNote()] };
+const FIELDS = { done: ['completed', 'completedUpdated', growDone], todo: ['todo', 'todoUpdated', growTodo], note: ['text', 'updated', () => growNote()], think: ['thinking', 'thinkingUpdated', () => growThink()] };
 for (const [id, [f, uf, grow]] of Object.entries(FIELDS)) {
   $(id).addEventListener('input', () => { const w = week(curWeek); w[f] = $(id).value; w[uf] = now(); grow($(id)); renderCounts(); scheduleSave(2500); });
   $(id).addEventListener('blur', () => { if (dirty) saveNow(); });
@@ -730,18 +743,18 @@ $('moveDone').onclick = () => {   // To do List에서 '완료'·[x] 표시된 �
 };
 
 /* 지난 메모장 보기 (수정도 가능) */
-const growViewer = () => { autoGrow($('pastDone'), 72, 220); autoGrow($('pastTodo'), 84, 280); autoGrow($('pastNote'), window.innerHeight * 0.28); };
+const growViewer = () => { autoGrow($('pastDone'), 72, 220); autoGrow($('pastTodo'), 84, 280); autoGrow($('pastNote'), window.innerHeight * 0.16); autoGrow($('pastThink'), window.innerHeight * 0.16); };
 const viewerCounts = () => { $('vnDone').textContent = nLines($('pastDone').value); $('vnTodo').textContent = nLines($('pastTodo').value); };
 function openViewer(k) {
   viewWeek = k;
   $('vTitle').textContent = `${k} 메모장`; $('vRange').textContent = weekRange(k);
-  $('pastDone').value = doneOf(k); $('pastTodo').value = todoOf(k); $('pastNote').value = textOf(k);
+  $('pastDone').value = doneOf(k); $('pastTodo').value = todoOf(k); $('pastNote').value = textOf(k); $('pastThink').value = thinkOf(k);
   $('vSent').textContent = DB.weeks[k]?.obsidianAt ? `옵시디언 전송 ${fmtDT(DB.weeks[k].obsidianAt)}` : '';
   $('viewer').classList.remove('hidden');
   viewerCounts(); growViewer();
 }
 $('pastList').addEventListener('click', e => { const b = e.target.closest('.past'); if (b) openViewer(b.dataset.wk); });
-for (const [id, f, uf] of [['pastDone', 'completed', 'completedUpdated'], ['pastTodo', 'todo', 'todoUpdated'], ['pastNote', 'text', 'updated']]) {
+for (const [id, f, uf] of [['pastDone', 'completed', 'completedUpdated'], ['pastTodo', 'todo', 'todoUpdated'], ['pastNote', 'text', 'updated'], ['pastThink', 'thinking', 'thinkingUpdated']]) {
   $(id).addEventListener('input', () => { const w = week(viewWeek); w[f] = $(id).value; w[uf] = now(); viewerCounts(); growViewer(); scheduleSave(2500); });
 }
 
@@ -755,7 +768,7 @@ function weekMarkdown(key) {
     `# ${key} 메모장`, '', `> ${weekRange(key)} · 완료 ${nd} · 할 일 ${nt} · 완료율 ${rate}%`, '',
     '## ✅ Completed Tasks', '', ...(nd ? itemLines(done, 'x') : ['_없음_']), '',
     '## 📋 To do List', '', ...(nt ? itemLines(todo, ' ') : ['_없음_']), '',
-    '## 📝 Memo', '', memo.trim() || '_없음_', ''].join('\n');
+    '## 📝 Refer', '', memo.trim() || '_없음_', ''].join('\n');
 }
 /* ───────── 옵시디언 저장소에 바로 기록 (GitHub API) ─────────
    앱이 옵시디언 저장소의 노트를 직접 만들거나 고친다. scripts/export-obsidian.mjs(일요일 자동 기록)와 같은 형식·같은 보호 규칙:
