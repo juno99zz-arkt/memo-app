@@ -1,5 +1,5 @@
 // 메모장을 옵시디언 노트(.md)로 기록 — GitHub Actions에서 매주 일요일 07:00(KST) 실행
-//   ① 이번 주 노트 `YYYY-Www.md` : Completed Tasks · To do List · Memo 세 칸
+//   ① 이번 주 노트 `YYYY-Www.md` : Completed Tasks · To do List · Refer 세 칸 (Thinking은 Inbox_thinking에 따로 기록)
 //   ② 지난 주 노트가 이 형식으로 이미 있고 앱 내용이 그 뒤에 바뀌었으면 갱신 (예전 형식 노트는 건드리지 않음)
 //   ③ `To do.md` : 이번 주 To do List 한 장 (매주 덮어씀)
 // 사용: MEMO_PASSWORD=... node scripts/export-obsidian.mjs <vault.json> <옵시디언 저장소 폴더>
@@ -82,7 +82,7 @@ function weekNote(key, done, todo, memo) {
     `# ${key} 메모장`, '', `> ${weekRange(key)} · 완료 ${nd} · 할 일 ${nt} · 완료율 ${rate}%`, '',
     '## ✅ Completed Tasks', '', ...(nd ? itemLines(done, 'x') : ['_없음_']), '',
     '## 📋 To do List', '', ...(nt ? itemLines(todo, ' ') : ['_없음_']), '',
-    '## 📝 Memo', '', memo.trim() || '_없음_', ''].join('\n');
+    '## 📝 Refer', '', memo.trim() || '_없음_', ''].join('\n');
 }
 
 /* ───── 기존 노트 보호 ─────

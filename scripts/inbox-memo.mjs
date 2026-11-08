@@ -1,12 +1,14 @@
-// 메모 앱 내용을 옵시디언 `0. Inbox/Inbox_memo/`에 기록 — GitHub Actions에서 매일 05:00·22:00(KST) 실행
-//   주마다 노트 한 장 `YYYY-Www 메모.md` (Completed Tasks · To do List · Memo 전체 본문). 내용이 바뀐 경우에만 다시 씀
+// 메모 앱 내용을 옵시디언에 기록 — GitHub Actions에서 매일 05:00·22:00(KST) 실행
+//   · `0. Inbox/Inbox_memo/YYYY-Www 메모.md`     : Completed Tasks · To do List · Refer
+//   · `0. Inbox/Inbox_thinking/YYYY-Www Thinking.md` : Thinking (내 문장 그대로)
+//   내용이 바뀐 경우에만 다시 쓴다. 정리 루틴이 노트를 다른 폴더로 옮겨도 `memo-app` 속성으로 찾아 그 자리에서 갱신한다
 // 사용: MEMO_PASSWORD=... node scripts/inbox-memo.mjs <vault.json> <옵시디언 저장소 폴더>
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSync, readSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { webcrypto as crypto, createHash } from 'node:crypto';
 
 const [vaultPath, outRoot] = process.argv.slice(2);
-const password = process.env.MEMO_PASSWORD, FOLDER = process.env.INBOX_MEMO_FOLDER || '0. Inbox/Inbox_memo';
+const password = process.env.MEMO_PASSWORD, FOLDER = process.env.INBOX_MEMO_FOLDER || '0. Inbox/Inbox_memo', THINK_FOLDER = process.env.INBOX_THINKING_FOLDER || '0. Inbox/Inbox_thinking';
 if (!vaultPath || !outRoot) { console.error('사용: node inbox-memo.mjs <vault.json> <옵시디언 폴더>'); process.exit(2); }
 if (!password) { console.error('MEMO_PASSWORD 시크릿이 없습니다'); process.exit(2); }
 
@@ -35,7 +37,7 @@ try { db = await openVault(JSON.parse(readFileSync(vaultPath, 'utf8')), password
 catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 같은지 확인하세요'); process.exit(1); }
 
 /* 속성 보호: 옵시디언·정리 루틴이 붙인 속성(보안, 고친 tags 등)은 유지 */
-const OURS = new Set(['week', 'period', 'saved', 'memo-hash', 'source']);
+const OURS = new Set(['week', 'period', 'saved', 'memo-hash', 'source', 'memo-app']);
 function parseFront(txt) {
   const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/); if (!m) return { blocks: [], body: txt };
   const blocks = [];
@@ -50,25 +52,55 @@ function merge(gen, existing, hash) {
   return `---\n${blocks.flatMap(b => b.lines).join('\n')}\n---\n${g.body}`;
 }
 
-const textOfWeek = w => typeof w?.text === 'string' ? w.text : '';
-const box = (t, mark) => String(t || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `- [${mark}] ${l.replace(/^(?:[-*•]\s+)?(?:\[[ xX\/-]\]\s*)?/, '')}`);
-function note(key, w, savedAt) {
-  const s = weekStart(key), e = weekEnd(key), done = box(w.completed, 'x'), todo = box(w.todo, ' '), memo = textOfWeek(w).trim();
-  return ['---', `week: ${key}`, `period: ${ymd(s)} ${hm(s)} ~ ${ymd(e)} ${hm(e)}`, `saved: ${savedAt}`, '보안: 개인정보', 'tags: [메모앱]', 'source: 메모 앱 (Actions가 매일 05:00·22:00에 기록)', '---', '',
-    `# ${key} 메모`, '', '> 메모 앱 내용의 사본입니다. 앱이 바뀐 내용을 다시 씁니다 — 여기서 고치지 말고 앱에서 고치세요.', '',
-    '## ✅ Completed Tasks', '', ...(done.length ? done : ['_없음_']), '',
-    '## 📋 To do List', '', ...(todo.length ? todo : ['_없음_']), '',
-    '## 📝 Memo', '', memo || '_없음_', ''].join('\n');
+/* 정리 루틴이 노트를 다른 폴더로 옮겼어도 찾는다: 앞부분(속성)만 읽어 `memo-app: <종류>` + `week: <주>`가 같은 노트를 고른다 */
+function* mdFiles(d) {
+  for (const e of readdirSync(d, { withFileTypes: true })) {
+    if (e.name.startsWith('.')) continue;
+    const f = join(d, e.name);
+    if (e.isDirectory()) yield* mdFiles(f); else if (e.name.endsWith('.md')) yield f;
+  }
+}
+function headOf(f) { const fd = openSync(f, 'r'), b = Buffer.alloc(700), n = readSync(fd, b, 0, 700, 0); closeSync(fd); return b.toString('utf8', 0, n); }
+function findNote(kind, key) {
+  for (const f of mdFiles(outRoot)) {
+    const h = headOf(f); if (!h.startsWith('---')) continue;
+    const fm = (h.match(/^---\r?\n([\s\S]*?)(?:\r?\n---|$)/) || [])[1] || '';
+    if (new RegExp(`^memo-app:\\s*${kind}\\s*$`, 'm').test(fm) && new RegExp(`^week:\\s*${key}\\s*$`, 'm').test(fm)) return f;
+  }
+  return null;
 }
 
-const dir = join(outRoot, FOLDER); mkdirSync(dir, { recursive: true });
+const textOfWeek = w => typeof w?.text === 'string' ? w.text : '';      // Refer
+const thinkOfWeek = w => typeof w?.thinking === 'string' ? w.thinking : '';
+const box = (t, mark) => String(t || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `- [${mark}] ${l.replace(/^(?:[-*•]\s+)?(?:\[[ xX\/-]\]\s*)?/, '')}`);
+const front = (key, kind, savedAt, tags) => ['---', `week: ${key}`, `period: ${ymd(weekStart(key))} ${hm(weekStart(key))} ~ ${ymd(weekEnd(key))} ${hm(weekEnd(key))}`, `saved: ${savedAt}`, '보안: 개인정보', `tags: [${tags}]`, 'source: 메모 앱 (Actions가 매일 05:00·22:00에 기록)', `memo-app: ${kind}`, '---', ''];
+function memoNote(key, w, savedAt) {
+  const done = box(w.completed, 'x'), todo = box(w.todo, ' '), refer = textOfWeek(w).trim();
+  return [...front(key, 'memo', savedAt, '메모앱'), `# ${key} 메모`, '', '> 메모 앱 내용의 사본입니다. 앱이 바뀐 내용을 다시 씁니다 — 여기서 고치지 말고 앱에서 고치세요.', '',
+    '## ✅ Completed Tasks', '', ...(done.length ? done : ['_없음_']), '',
+    '## 📋 To do List', '', ...(todo.length ? todo : ['_없음_']), '',
+    '## 📝 Refer', '', refer || '_없음_', ''].join('\n');
+}
+function thinkNote(key, w, savedAt) {   // 내 문장은 고치지 않고 그대로
+  return [...front(key, 'thinking', savedAt, '메모앱, 생각'), `# ${key} Thinking`, '', '> 메모 앱 Thinking 칸의 사본입니다. 앱이 바뀐 내용을 다시 씁니다 — 여기서 고치지 말고 앱에서 고치세요.', '',
+    thinkOfWeek(w).trim() || '_없음_', ''].join('\n');
+}
+
 const cur = isoWeek(), prev = isoWeek(new Date(weekStart(cur).getTime() - 864e5)), now = new Date();
+function put(kind, key, defaultPath, gen, hash, savedAt) {
+  const found = findNote(kind, key), file = found || defaultPath, ex = existsSync(file) ? readFileSync(file, 'utf8') : null;
+  const rel = file.slice(outRoot.length).replace(/^\/+/, '');
+  if (ex !== null && hashInNote(ex) === hash) { console.log(`그대로: ${rel}`); return; }
+  mkdirSync(join(file, '..'), { recursive: true });
+  writeFileSync(file, merge(gen(savedAt), ex, hash));
+  console.log(`${ex === null ? '작성' : '갱신'}: ${rel}`);
+}
 for (const key of [prev, cur]) {
-  const w = db.weeks?.[key]; if (!w || ![w.completed, w.todo, textOfWeek(w)].some(t => String(t || '').trim())) continue;
-  const hash = createHash('sha1').update(['inbox-v1', w.completed || '', w.todo || '', textOfWeek(w)].join('\0')).digest('hex').slice(0, 10);
-  const file = join(dir, `${key} 메모.md`), ex = existsSync(file) ? readFileSync(file, 'utf8') : null;
-  if (ex !== null && hashInNote(ex) === hash) { console.log(`그대로: ${FOLDER}/${key} 메모.md`); continue; }
-  const saved = w.updated ? ymd(new Date(w.updated)) + ' ' + hm(new Date(w.updated)) : `${ymd(now)} ${hm(now)}`;
-  writeFileSync(file, merge(note(key, w, saved), ex, hash));
-  console.log(`${ex === null ? '작성' : '갱신'}: ${FOLDER}/${key} 메모.md`);
+  const w = db.weeks?.[key]; if (!w) continue;
+  const saved = w.updated || w.todoUpdated || w.completedUpdated || w.thinkingUpdated ? (d => `${ymd(d)} ${hm(d)}`)(new Date([w.updated, w.todoUpdated, w.completedUpdated, w.thinkingUpdated].filter(Boolean).sort().pop())) : `${ymd(now)} ${hm(now)}`;
+  const h = (...p) => createHash('sha1').update(p.join('\0')).digest('hex').slice(0, 10);
+  if ([w.completed, w.todo, textOfWeek(w)].some(t => String(t || '').trim()) || findNote('memo', key))
+    put('memo', key, join(outRoot, FOLDER, `${key} 메모.md`), sv => memoNote(key, w, sv), h('inbox-v2', w.completed || '', w.todo || '', textOfWeek(w)), saved);
+  if (thinkOfWeek(w).trim() || findNote('thinking', key))
+    put('thinking', key, join(outRoot, THINK_FOLDER, `${key} Thinking.md`), sv => thinkNote(key, w, sv), h('think-v1', thinkOfWeek(w)), saved);
 }
