@@ -5,7 +5,7 @@ on:
   # 예약 실행은 Apps Script "GH 디스패처"가 workflow_dispatch로 호출 (GitHub cron 3~6시간 지연 대응, 2026-11-08)
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: pickle-digest
   cancel-in-progress: false
@@ -26,6 +26,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: 수집된 새 할 일 반영 (암호화 유지)
+        env:
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+        run: |
+          P='obsidian/.noji/digest/additions.json'
+          if [ -f "$P" ]; then
+            node scripts/apply-todos.mjs vault.json "$P"
+            git config user.name "memo-app"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- vault.json
+            if ! git diff --cached --quiet; then
+              git commit -m "수집된 할 일 반영 (암호화)"
+              git pull --rebase
+              git push
+            fi
+          fi
+
       - name: 요약 노트 만들기
         env:
           MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
