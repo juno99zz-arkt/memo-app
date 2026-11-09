@@ -72,13 +72,22 @@ for (const f of reports) {
   if (top) { topDue = plain(top[1]).trim(); latest = f.slice(0, 10); }
 }
 
-const out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `기간: ${sinceStr} ~ ${ymd(now)}`, '보안: 개인정보', 'tags: [피클]', '원본: AI 초안 (메모 앱 Actions가 매일 갱신)', '---', '',
+let out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `기간: ${sinceStr} ~ ${ymd(now)}`, '보안: 개인정보', 'tags: [피클]', '원본: AI 초안 (메모 앱 Actions가 매일 갱신)', '---', '',
   '# 피클 브리핑용 요약', '',
   '> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 한 주를 브리핑하세요. 사내전용·개인정보 노트와 수집함 본문은 포함하지 않았습니다.', '',
   '## 이번 주 · 지난 주 메모장', '', ...weekBlock(cur, '이번 주'), ...weekBlock(prev, '지난 주'),
   '## 최근 7일 정리 리포트 요약', '', ...(sum.length ? sum : ['- 읽을 수 있는 리포트 없음']), '',
   ...(topDue ? [`## 다가오는 기한 (${latest} 리포트 기준)`, '', topDue, ''] : []),
   ...(skipped.length ? [`_보안 표시가 없어 건너뛴 리포트: ${skipped.join(', ')}_`, ''] : [])].join('\n');
+
+const digestPath = join(outRoot, '3. Area of Responsibility', '브리핑', '할 일·주요사항.md');
+if (existsSync(digestPath)) {
+  const digest = readFileSync(digestPath,'utf8');
+  const updated = (frontOf(digest).match(/^updated:\s*(.+)$/m)||[])[1];
+  out += '\n\n## 수집함에서 찾은 할 일·주요사항\n\n' +
+    (updated ? '자료 기준: '+updated+' (완료 상태는 메모 앱 기준)\n\n' : '자료 생성 시각 미확인\n\n') +
+    digest.replace(/^---[\s\S]*?---\s*/, '').split('\n').slice(0,85).join('\n');
+}
 
 const dir = join(outRoot, '3. Area of Responsibility', 'AI·HR');
 mkdirSync(dir, { recursive: true });
