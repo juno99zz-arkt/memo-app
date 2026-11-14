@@ -89,6 +89,16 @@ if (existsSync(digestPath)) {
     digest.replace(/^---[\s\S]*?---\s*/, '').split('\n').slice(0,85).join('\n');
 }
 
+// NoJI 자동화 주간 점검(vault-agent, 금요일 저녁)이 남긴 피클 보고 — 8일 안의 것만 싣는다
+const auditPath = join(outRoot, '3. Area of Responsibility', 'AI·HR', 'NoJI 주간 점검', '피클 보고.md');
+if (existsSync(auditPath)) {
+  const audit = readFileSync(auditPath, 'utf8');
+  const day = (frontOf(audit).match(/^날짜:\s*(\d{4}-\d{2}-\d{2})/m) || [])[1];
+  if (day && (now - new Date(day + 'T00:00:00')) / 864e5 <= 8)
+    out += `\n\n## NoJI 자동화 주간 점검 (${day})\n\n> 이 구역이 새로 바뀐 날에는 브리핑 맨 앞에서 먼저 보고하세요.\n\n` +
+      audit.replace(/^---[\s\S]*?---\s*/, '').split('\n').slice(0, 40).join('\n');
+}
+
 const dir = join(outRoot, '3. Area of Responsibility', 'AI·HR');
 mkdirSync(dir, { recursive: true });
 writeFileSync(join(dir, 'Pickle 브리핑용.md'), out);
