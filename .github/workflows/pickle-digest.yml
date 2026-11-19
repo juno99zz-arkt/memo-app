@@ -4,6 +4,11 @@ name: 피클 브리핑 요약
 on:
   # 예약 실행은 Apps Script "GH 디스패처"가 workflow_dispatch로 호출 (GitHub cron 3~6시간 지연 대응, 2026-11-08)
   workflow_dispatch:
+    inputs:
+      weekly:
+        description: "주간 요약도 만들기 (월요일엔 자동, 시험용)"
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency:
@@ -46,6 +51,7 @@ jobs:
       - name: 요약 노트 만들기
         env:
           MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+          WEEKLY: ${{ inputs.weekly && '1' || '' }}
         run: node scripts/pickle-digest.mjs vault.json obsidian
       - name: 옵시디언 저장소에 커밋
         working-directory: obsidian

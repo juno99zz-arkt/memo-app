@@ -103,14 +103,18 @@ function inboxTodos() {
 }
 
 /* ── ③ AI 작업 남은 일: 진행 중 전부 + 최근 3일 완료 중 남은일 있는 것 (개인정보 기록은 건수만) ── */
-function aiWork() {
-  const dir = join(outRoot, '3. Area of Responsibility', 'AI·HR', 'AI 작업기록');
-  if (!existsSync(dir)) return ['- 작업기록 폴더 없음'];
+const aiDir = join(outRoot, '3. Area of Responsibility', 'AI·HR', 'AI 작업기록');
+function loadRecs(dir) {
   const field = (fm, k) => ((fm.match(new RegExp(`^${k}:\\s*(.*)$`, 'm')) || [])[1] || '').trim().replace(/^"(.*)"$/, '$1');
-  const recs = readdirSync(dir).filter(f => f.endsWith('.md')).map(f => {
+  return readdirSync(dir).filter(f => f.endsWith('.md')).map(f => {
     const fm = frontOf(readFileSync(join(dir, f), 'utf8'));
     return { tool: field(fm, '도구'), st: field(fm, '상태'), task: field(fm, '작업'), next: field(fm, '남은일'), sec: field(fm, '보안'), start: field(fm, '시작'), up: field(fm, '갱신') };
   });
+}
+function aiWork() {
+  const dir = aiDir;
+  if (!existsSync(dir)) return ['- 작업기록 폴더 없음'];
+  const recs = loadRecs(dir);
   const recent = new Date(now); recent.setDate(recent.getDate() - 3); const recentStr = ymd(recent);
   const openR = recs.filter(r => r.st === '진행 중').sort((a, b) => a.start.localeCompare(b.start));
   const doneR = recs.filter(r => r.st === '완료' && r.next && !/^(없음|-)$/.test(r.next) && r.up.slice(0, 10) >= recentStr).sort((a, b) => b.up.localeCompare(a.up));
@@ -133,8 +137,62 @@ function thinking() {
   return [`${key === cur ? '이번 주' : '지난 주'} · ${key}`, '', ...ls.slice(0, 30).map(l => cut(l, 240)), ...(ls.length > 30 ? [`…외 ${ls.length - 30}줄`] : [])];
 }
 
+/* ── 주간 요약 (월요일 아침, 방금 끝난 지난 주 · 별도 노트) ── */
+// WEEKLY=1 이면 요일과 상관없이 만든다(시험용)
+const WEEKLY_NAME = 'Pickle 주간 요약';
+const isWeeklyDay = now.getDay() === 1 || process.env.WEEKLY === '1';
+function weeklyNote() {
+  const wk = prev, from = ymd(weekStart(wk)), toD = new Date(weekEnd(wk)); toD.setDate(toD.getDate() - 1); const to = ymd(toD);
+  const inWeek = s => s && s.slice(0, 10) >= from && s.slice(0, 10) <= to;
+  const w = db.weeks?.[wk] || {}, done = lines(w.completed), todo = lines(w.todo);
+  const rate = done.length + todo.length ? Math.round(done.length / (done.length + todo.length) * 100) : 0;
+  // 정리 리포트: 그 주의 한 줄 요약 + '이번 주 요약'(금요일)
+  const reps = existsSync(repDir) ? readdirSync(repDir).filter(f => /^\d{4}-\d{2}-\d{2} 정리 리포트\.md$/.test(f) && inWeek(f)).sort() : [];
+  const repLines = [], weekSum = [];
+  for (const f of reps) {
+    const txt = readFileSync(join(repDir, f), 'utf8');
+    if (!['공개', '비식별'].includes((frontOf(txt).match(/^보안:\s*(\S+)/m) || [])[1])) continue;
+    const one = (txt.match(/^\*\*한 줄 요약\*\*:\s*(.+)$/m) || txt.match(/^## 한 줄 요약[ \t]*\r?\n(?:[ \t]*\r?\n)*(?!#)(.+)$/m) || [])[1];
+    if (one) repLines.push(`- ${f.slice(5, 10).replace('-', '/')} ${cut(plain(one).trim(), 160)}`);
+    const ws = secOf(txt, '이번 주 요약').split('\n').map(l => l.trim()).filter(Boolean);
+    if (ws.length) weekSum.splice(0, weekSum.length, ...ws.slice(0, 6).map(l => cut(plain(l), 220)));
+  }
+  // AI 작업: 그 주에 끝낸 것(도구별) + 지금 진행 중
+  const recs = existsSync(aiDir) ? loadRecs(aiDir) : [];
+  const doneW = recs.filter(r => r.st === '완료' && inWeek(r.up)).sort((a, b) => a.up.localeCompare(b.up));
+  const byTool = Object.entries(doneW.reduce((m, r) => (m[r.tool] = (m[r.tool] || 0) + 1, m), {})).map(([t, n]) => `${t} ${n}`).join(' · ');
+  const day = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+  const shown = doneW.filter(r => r.sec !== '개인정보');
+  const openR = recs.filter(r => r.st === '진행 중' && r.sec !== '개인정보');
+  // 이번 주 기한: 할 일 수집 상태(index.json)에서 내 열린 할 일 중 기한이 오늘~6일 뒤
+  const idxPath = join(outRoot, '.noji', 'digest', 'index.json'), today = ymd(now), end = new Date(now); end.setDate(end.getDate() + 6); const endStr = ymd(end);
+  const seen = new Set();
+  const due = existsSync(idxPath) ? (JSON.parse(readFileSync(idxPath, 'utf8')).items || [])
+    .filter(i => i.due && i.due >= today && i.due <= endStr && i.kind !== 'key' && ['open', 'doing'].includes(i.state) && (!i.owner || i.owner === '나'))
+    .filter(i => { const k = i.text + '|' + i.due; if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => a.due.localeCompare(b.due)) : null;
+  const tk = typeof w.thinking === 'string' ? w.thinking.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  return ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `주: ${wk} (${from} ~ ${to})`, '보안: 개인정보', 'tags: [피클, 주간요약]', '원본: AI 초안 (메모 앱 Actions가 매주 월요일 갱신)', '---', '',
+    `# 피클 주간 요약 · ${wk} (${md(weekStart(wk))}~${md(toD)})`, '',
+    '> 월요일 아침 브리핑에서 지난 한 주를 돌아보고 이번 주를 예고할 때 읽으세요. 일정은 구글 캘린더를 함께 보세요.', '',
+    '## 한 주 숫자', '',
+    `- 메모장: 완료 ${done.length} · 남은 할 일 ${todo.length} · 완료율 ${rate}%`,
+    `- 정리 리포트: ${reps.length}일 작성`,
+    `- AI 작업 완료: ${doneW.length}건${byTool ? ` (${byTool})` : ''} · 지금 진행 중 ${openR.length}건`, '',
+    '## 지난 주 완료한 일', '', ...bullet(done), '',
+    '## 이번 주로 넘어간 할 일', '', ...bullet(todo), '',
+    '## 이번 주 기한 (오늘~6일 뒤)', '', ...(due === null ? ['- 할 일 수집 상태 없음'] : due.length ? due.slice(0, 15).map(i => `- ${md(new Date(i.due + 'T00:00:00'))} ${cut(i.text, 100)} · [${i.source}]`) : ['- 없음']), '',
+    ...(weekSum.length ? ['## 정리 리포트 · 이번 주 요약', '', ...weekSum, ''] : []),
+    '## 정리 리포트 · 날짜별 한 줄', '', ...(repLines.length ? repLines : ['- 없음']), '',
+    '## AI 작업 · 지난 주 끝낸 것', '', ...(shown.length ? shown.slice(-20).map(r => `- ${r.tool} · ${day(r.up)} · ${cut(r.task, 90)}`) : ['- 없음']),
+    ...(shown.length > 20 ? [`- …앞의 ${shown.length - 20}건 생략`] : []), ...(doneW.length > shown.length ? [`_개인정보 기록 ${doneW.length - shown.length}건은 건수만_`] : []), '',
+    '## AI 작업 · 진행 중', '', ...(openR.length ? openR.map(r => `- ${r.tool} · ${day(r.start)}~ · ${cut(r.task, 90)}`) : ['- 없음']), '',
+    '## 지난 주 Thinking', '', ...(tk.length ? tk.slice(0, 40).map(l => cut(l, 240)) : ['- 없음']), ...(tk.length > 40 ? [`…외 ${tk.length - 40}줄`] : []), ''].join('\n');
+}
+
 let out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `기간: ${sinceStr} ~ ${ymd(now)}`, '보안: 개인정보', 'tags: [피클]', '원본: AI 초안 (메모 앱 Actions가 매일 갱신)', '---', '',
   '# 피클 브리핑용 요약', '',
+  ...(isWeeklyDay ? [`> **오늘은 주간 요약도 있습니다**: 같은 폴더의 \`${WEEKLY_NAME}.md\`(${prev})를 함께 읽고, 브리핑 끝에 지난 주 돌아보기와 이번 주 기한을 덧붙이세요.`, ''] : []),
   '> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 브리핑하세요. 순서: ① 오늘 정리 리포트 → ② 할 일 → ③ AI 작업 남은 일 → ④ Thinking → 메모장·기한. 개인정보 노트 본문은 넣지 않았고, 할 일과 Thinking은 사용자 본인 기록입니다.', '',
   '## ① 오늘 정리 리포트', '', ...todayReport(), '',
   '## ② 할 일 (기한 있는 것)', '', ...inboxTodos(), '',
@@ -159,3 +217,7 @@ const dir = join(outRoot, '3. Area of Responsibility', 'AI·HR');
 mkdirSync(dir, { recursive: true });
 writeFileSync(join(dir, 'Pickle 브리핑용.md'), out);
 console.log(`작성: 3. Area of Responsibility/AI·HR/Pickle 브리핑용.md (메모 ${cur}·${prev}, 리포트 ${sum.length}건)`);
+if (isWeeklyDay) {
+  writeFileSync(join(dir, `${WEEKLY_NAME}.md`), weeklyNote());
+  console.log(`작성: 3. Area of Responsibility/AI·HR/${WEEKLY_NAME}.md (${prev})`);
+}
