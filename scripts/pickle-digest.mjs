@@ -66,7 +66,8 @@ let topDue = '', latest = '';
 for (const f of reports) {
   const txt = readFileSync(join(repDir, f), 'utf8'), sec = (frontOf(txt).match(/^보안:\s*(\S+)/m) || [])[1];
   if (!['공개', '비식별'].includes(sec)) { skipped.push(f.slice(0, 10)); continue; }
-  const one = (txt.match(/^\*\*한 줄 요약\*\*:\s*(.+)$/m) || [])[1];
+  // 예전 형식 `**한 줄 요약**: …` 과 11/9부터 쓰는 `## 한 줄 요약` 제목 다음 줄 형식 모두 읽음
+  const one = (txt.match(/^\*\*한 줄 요약\*\*:\s*(.+)$/m) || txt.match(/^## 한 줄 요약[ \t]*\r?\n(?:[ \t]*\r?\n)*(?!#)(.+)$/m) || [])[1];
   if (one) sum.push(`- ${f.slice(5, 10).replace('-', '/')} ${plain(one).trim()}`);
   const top = txt.match(/^## 다음 기한 Top \d+\s*\n([\s\S]*?)(?=^## |\s*$(?![\s\S]))/m);
   if (top) { topDue = plain(top[1]).trim(); latest = f.slice(0, 10); }
