@@ -190,13 +190,36 @@ function weeklyNote() {
     '## 지난 주 Thinking', '', ...(tk.length ? tk.slice(0, 40).map(l => cut(l, 240)) : ['- 없음']), ...(tk.length > 40 ? [`…외 ${tk.length - 40}줄`] : []), ''].join('\n');
 }
 
+// AI 허브 '조치 필요' — 허브 화면과 같은 규칙(15분마다 모은 status.json의 자동 판정 + 등록부의 기한 안 '직접 할 일'), 2026-11-22
+async function hubActions() {
+  const OWNER = 'juno99zz-arkt';
+  try {
+    const [st, reg] = await Promise.all([
+      fetch(`https://raw.githubusercontent.com/${OWNER}/agent-hub/refs/heads/status/status.json`).then(r => r.ok ? r.json() : null),
+      fetch(`https://raw.githubusercontent.com/${OWNER}/agent-hub/HEAD/registry.json`).then(r => r.ok ? r.json() : null)]);
+    if (!st && !reg) return ['- AI 허브 상태를 읽지 못함'];
+    const today = ymd(now), items = [];
+    if (st && now - new Date(st.generated) > 3 * 3600e3) items.push({ level: 'error', title: `허브 상태 자동 수집 멈춤 (마지막 ${st.generated.slice(5, 16).replace('T', ' ')} UTC)` });
+    else if (st) items.push(...(st.actions || []));
+    for (const t of (reg && reg.todos) || []) if (!t.until || today < t.until) items.push({ level: 'todo', ...t });
+    const order = { error: 0, warn: 1, todo: 2 };
+    items.sort((a, b) => (order[a.level] ?? 3) - (order[b.level] ?? 3));
+    if (!items.length) return ['- 없음'];
+    const tag = { error: '오류', warn: '주의', todo: '직접' };
+    return items.slice(0, 8).map(x => `- [${tag[x.level] || x.level}] ${cut(x.title, 90)}${x.detail ? ` — ${cut(x.detail, 110)}` : ''}`)
+      .concat(items.length > 8 ? [`- …외 ${items.length - 8}건`] : []);
+  } catch { return ['- AI 허브 상태를 읽지 못함']; }
+}
+const hubLines = await hubActions();
+
 let out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `기간: ${sinceStr} ~ ${ymd(now)}`, '보안: 개인정보', 'tags: [피클]', '원본: AI 초안 (메모 앱 Actions가 매일 갱신)', '---', '',
   '# 피클 브리핑용 요약', '',
   ...(isWeeklyDay ? [`> **오늘은 주간 요약도 있습니다**: 같은 폴더의 \`${WEEKLY_NAME}.md\`(${prev})를 함께 읽고, 브리핑 끝에 지난 주 돌아보기와 이번 주 기한을 덧붙이세요.`, ''] : []),
-  '> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 브리핑하세요. 순서: ① 오늘 정리 리포트 → ② 할 일 → ③ AI 작업 남은 일 → ④ Thinking → 메모장·기한. 개인정보 노트 본문은 넣지 않았고, 할 일과 Thinking은 사용자 본인 기록입니다.', '',
+  '> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 브리핑하세요. 순서: ① 오늘 정리 리포트 → ② 할 일 → ③ AI 작업 남은 일 → ③-1 자동화 조치 필요 → ④ Thinking → 메모장·기한. 개인정보 노트 본문은 넣지 않았고, 할 일과 Thinking은 사용자 본인 기록입니다.', '',
   '## ① 오늘 정리 리포트', '', ...todayReport(), '',
   '## ② 할 일 (기한 있는 것)', '', ...inboxTodos(), '',
   '## ③ AI 작업 남은 일', '', ...aiWork(), '',
+  '## ③-1 자동화 조치 필요 (AI 허브)', '', '> 오류·주의가 있으면 먼저 말하고, [직접] 항목은 사용자가 할 일로 전하세요.', '', ...hubLines, '',
   '## ④ Thinking', '', ...thinking(), '',
   '## 이번 주 · 지난 주 메모장', '', ...weekBlock(cur, '이번 주'), ...weekBlock(prev, '지난 주'),
   '## 최근 7일 정리 리포트 요약', '', ...(sum.length ? sum : ['- 읽을 수 있는 리포트 없음']), '',
