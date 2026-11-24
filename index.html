@@ -220,6 +220,7 @@
     <label class="lbl">쓰는 방법</label>
     <ol class="guide">
       <li><b>Completed Tasks</b> 이번 주 끝낸 일을 한 줄씩 · <b>To do List</b> 해야 할 일을 한 줄씩 · <b>Refer</b> 참고 자료 · <b>Thinking</b> 생각</li>
+      <li>엑셀·구글 시트·웹의 표를 복사해 붙이면 Refer·Thinking에는 표(마크다운)로, To do List·Completed Tasks에는 한 줄(칸 | 칸)로 들어갑니다</li>
       <li>To do List에서 끝낸 줄은 앞에 <code>완료</code>를 쓰거나 <code>- [x]</code>로 바꾼 뒤 <b>✓ 완료한 줄 옮기기</b>를 누르면 Completed Tasks로 이동합니다</li>
       <li>월요일 05:00에 새 주가 열리고, To do List에서 못 끝낸 줄은 새 주 To do List로 넘어갑니다 (Completed Tasks · Refer · Thinking은 새로 시작)</li>
       <li>Completed Tasks · To do List · Refer는 옵시디언 <code>Inbox_memo</code>에, Thinking은 <code>Inbox_thinking</code>에 매일 05:00·22:00 기록됩니다 (일요일 07:00에는 주간 노트 <code>폴더/2026-W44.md</code>도 기록)</li>
@@ -741,6 +742,46 @@ $('moveDone').onclick = () => {   // To do List에서 '완료'·[x] 표시된 �
   w.todoUpdated = w.completedUpdated = ts;
   render(true); scheduleSave(); toast(`${moved.length}건을 Completed Tasks로 옮겼습니다`);
 };
+
+/* 표 붙여넣기: 엑셀·구글 시트·웹의 표를 복사해 붙이면
+   Refer·Thinking(자유 칸)에는 마크다운 표(옵시디언에서도 표로 보임), To do·Completed(줄 단위 칸)에는 한 줄(칸 | 칸)로 바뀐다. 표가 아닌 붙여넣기는 그대로 */
+function tableFromClipboard(cd) {
+  let rows = null;
+  const html = cd.getData('text/html');
+  if (/<table[\s>]/i.test(html)) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    rows = [...doc.querySelectorAll('tr')].map(tr => {
+      const out = [];
+      for (const c of tr.querySelectorAll(':scope > th, :scope > td')) {
+        c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+        out.push(c.textContent.replace(/ /g, ' ').split('\n').map(x => x.replace(/[ \t]+/g, ' ').trim()).filter(Boolean).join('\n'));
+        for (let i = 1; i < (parseInt(c.getAttribute('colspan'), 10) || 1) && i < 20; i++) out.push('');   // 합친 칸은 빈 칸으로 채움
+      }
+      return out;
+    }).filter(r => r.length);
+  } else {
+    const lines = cd.getData('text/plain').replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n');
+    if (lines.length >= 2 && lines.every(l => l.includes('\t'))) rows = lines.map(l => l.split('\t').map(x => x.trim()));
+  }
+  if (!rows || !rows.length || (rows.length < 2 && rows[0].length < 2) || !rows.some(r => r.some(Boolean))) return null;
+  const w = Math.max(...rows.map(r => r.length));
+  return rows.map(r => Array.from({ length: w }, (_, i) => r[i] || ''));
+}
+function tableText(rows, md) {
+  if (!md) return rows.filter(r => r.some(Boolean)).map(r => r.map(c => c.replace(/\n/g, ' / ')).join(' | ').replace(/(?: \| )+$/, '')).join('\n');
+  const esc = c => c.replace(/\|/g, '\\|').replace(/\n/g, '<br>'), line = r => '| ' + r.map(esc).join(' | ') + ' |';
+  return [line(rows[0]), '| ' + rows[0].map(() => '---').join(' | ') + ' |', ...rows.slice(1).map(line)].join('\n');
+}
+for (const [id, md] of [['note', true], ['think', true], ['pastNote', true], ['pastThink', true], ['done', false], ['todo', false], ['pastDone', false], ['pastTodo', false]]) {
+  $(id).addEventListener('paste', e => {
+    const rows = tableFromClipboard(e.clipboardData); if (!rows) return;
+    e.preventDefault();
+    const el = e.target, before = el.value.slice(0, el.selectionStart), after = el.value.slice(el.selectionEnd);
+    let ins = tableText(rows, md);
+    if (md) ins = (!before || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n') + ins + '\n' + (after && !after.startsWith('\n') ? '\n' : '');
+    if (!document.execCommand('insertText', false, ins)) { el.setRangeText(ins, el.selectionStart, el.selectionEnd, 'end'); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+}
 
 /* 지난 메모장 보기 (수정도 가능) */
 const growViewer = () => { autoGrow($('pastDone'), 72, 220); autoGrow($('pastTodo'), 84, 280); autoGrow($('pastNote'), window.innerHeight * 0.16); autoGrow($('pastThink'), window.innerHeight * 0.16); };
