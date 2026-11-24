@@ -68,6 +68,11 @@
   #done { min-height: 84px; } #todo { min-height: 110px; } #note { min-height: 24vh; font-size: 16px; } #think { min-height: 28vh; font-size: 16px; }
   .footrow { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
   .rate { font-size: 12px; color: var(--muted); }
+  .imgs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 14px; } .imgs:empty { display: none; }
+  .thumb { position: relative; } .thumb img, .thumb .ph { height: 96px; max-width: 170px; min-width: 64px; border-radius: 8px; border: 1px solid var(--line); object-fit: cover; cursor: zoom-in; background: #f3f4f6; }
+  .thumb .ph { display: flex; align-items: center; justify-content: center; padding: 0 10px; font-size: 11px; color: var(--muted); cursor: default; }
+  .thumb .x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(31,35,40,.65); color: #fff; font-size: 11px; line-height: 22px; padding: 0; cursor: pointer; }
+  #imgView { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.82); display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; } #imgView img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 
   /* 상태 숫자 */
   .counts { display: flex; justify-content: center; gap: 18px; margin: 14px 0 0; font-size: 13px; color: var(--muted); }
@@ -165,12 +170,14 @@
 끝낸 줄은 앞에 '완료'를 붙이면 옮길 수 있어요"></textarea>
     </section>
     <section class="card c-memo">
-      <div class="chead"><span class="pill pill-memo">Refer</span></div>
-      <textarea id="note" spellcheck="false" placeholder="참고할 자료·링크·내용을 적으세요."></textarea>
+      <div class="chead"><span class="pill pill-memo">Refer</span><span class="grow"></span><button class="mini-btn" id="addImgNote" type="button">🖼 이미지</button></div>
+      <textarea id="note" spellcheck="false" placeholder="참고할 자료·링크·내용을 적으세요. 표·그림도 붙여넣을 수 있어요."></textarea>
+      <div class="imgs" id="imgsNote"></div>
     </section>
     <section class="card c-think">
-      <div class="chead"><span class="pill pill-think">Thinking</span></div>
+      <div class="chead"><span class="pill pill-think">Thinking</span><span class="grow"></span><button class="mini-btn" id="addImgThink" type="button">🖼 이미지</button></div>
       <textarea id="think" spellcheck="false" placeholder="떠오르는 생각을 자유롭게 적으세요."></textarea>
+      <div class="imgs" id="imgsThink"></div>
     </section>
 
     <div class="footrow"><span class="rate" id="rate"></span></div>
@@ -198,10 +205,12 @@
     <section class="card c-memo">
       <div class="chead"><span class="pill pill-memo">Refer</span></div>
       <textarea id="pastNote" spellcheck="false"></textarea>
+      <div class="imgs" id="imgsPastNote"></div>
     </section>
     <section class="card c-think">
       <div class="chead"><span class="pill pill-think">Thinking</span></div>
       <textarea id="pastThink" spellcheck="false"></textarea>
+      <div class="imgs" id="imgsPastThink"></div>
     </section>
     <div class="row" style="margin-top:12px;flex-wrap:wrap">
       <button class="btn" id="vObs">옵시디언에 기록</button>
@@ -220,6 +229,7 @@
     <label class="lbl">쓰는 방법</label>
     <ol class="guide">
       <li><b>Completed Tasks</b> 이번 주 끝낸 일을 한 줄씩 · <b>To do List</b> 해야 할 일을 한 줄씩 · <b>Refer</b> 참고 자료 · <b>Thinking</b> 생각</li>
+      <li>Refer·Thinking에는 그림도 붙여넣을 수 있습니다(캡처·복사한 이미지 붙여넣기, 끌어놓기, 🖼 이미지 버튼). 줄여서 암호화해 저장소 <code>img/</code>에 올리고, 옵시디언에는 <code>Attachments/</code> 첨부로 들어갑니다</li>
       <li>엑셀·구글 시트·웹의 표를 복사해 붙이면 Refer·Thinking에는 표(마크다운)로, To do List·Completed Tasks에는 한 줄(칸 | 칸)로 들어갑니다</li>
       <li>To do List에서 끝낸 줄은 앞에 <code>완료</code>를 쓰거나 <code>- [x]</code>로 바꾼 뒤 <b>✓ 완료한 줄 옮기기</b>를 누르면 Completed Tasks로 이동합니다</li>
       <li>월요일 05:00에 새 주가 열리고, To do List에서 못 끝낸 줄은 새 주 To do List로 넘어갑니다 (Completed Tasks · Refer · Thinking은 새로 시작)</li>
@@ -264,6 +274,9 @@
     <div class="row" style="flex-wrap:wrap"><button class="btn" id="sExport">JSON 내보내기 (복호화본)</button><button class="btn" id="sSync">지금 동기화</button></div>
   </div>
 </div>
+
+<input type="file" id="imgPick" accept="image/*" multiple hidden>
+<div id="imgView" class="hidden"><img alt=""></div>
 
 <script>
 'use strict';
@@ -465,7 +478,7 @@ async function pull() {
     if (!theirs) { setSync('원격 복호화 실패', 'bad'); toast('원격 메모가 다른 비밀번호로 저장되어 있습니다'); return; }
     SHA = remote.sha;
     const raw = JSON.stringify(theirs), merged = mergeDB(DB, theirs), changed = JSON.stringify(merged) !== raw;
-    DB = merged; rollover(); await cacheLocal(); render();
+    DB = merged; rollover(); await cacheLocal(); render(); flushImages();
     if ((changed || dirty) && token) scheduleSave(); else setSync('동기화됨', 'ok');
   } catch (e) { setSync('오프라인', 'bad'); }
 }
@@ -664,6 +677,7 @@ async function lock() {
   for (let i = 0; saving && i < 100; i++) await new Promise(r => setTimeout(r, 100));   // 저장 중이면 끝날 때까지 기다림
   if (rev !== savedRev) await saveNow();
   KEY = null; DB = null; SHA = null;
+  IMG_MEM.forEach(u => URL.revokeObjectURL(u)); IMG_MEM.clear(); IMG_FAIL.clear(); document.querySelectorAll('.imgs').forEach(b => { b.innerHTML = ''; b.dataset.sig = ''; });
     $('done').value = $('todo').value = $('note').value = $('think').value = $('pastDone').value = $('pastTodo').value = $('pastNote').value = $('pastThink').value = ''; $('pastList').innerHTML = $('stamp').textContent = $('rate').textContent = '';
   $('app').classList.add('hidden'); $('viewer').classList.add('hidden'); $('settings').classList.add('hidden');
   $('lock').classList.remove('hidden'); $('lockSub').textContent = '비밀번호를 입력하세요';
@@ -714,7 +728,7 @@ function render(force) {
   $('wkTitle').textContent = `${curWeek} 메모장`;
   $('wkRange').textContent = weekRange(curWeek);
   for (const [id, get] of [['done', doneOf], ['todo', todoOf], ['note', textOf], ['think', thinkOf]]) { const el = $(id); if (force || (document.activeElement !== el && el.value !== get(curWeek))) el.value = get(curWeek); }
-  growDone($('done')); growTodo($('todo')); growNote(); growThink();
+  growDone($('done')); growTodo($('todo')); growNote(); growThink(); renderAllImgs();
   renderCounts(); renderObsStamp();
 
   const past = Object.keys(DB.weeks).filter(k => k < curWeek && allOf(k).trim()).sort().reverse();
@@ -742,6 +756,96 @@ $('moveDone').onclick = () => {   // To do List에서 '완료'·[x] 표시된 �
   w.todoUpdated = w.completedUpdated = ts;
   render(true); scheduleSave(); toast(`${moved.length}건을 Completed Tasks로 옮겼습니다`);
 };
+
+/* ───────── 그림 붙여넣기 ─────────
+   Refer·Thinking에 이미지를 붙여넣거나(끌어놓기·🖼 버튼 포함) 넣으면: 줄여서(긴 변 1600px, JPEG) 같은 열쇠로 암호화해 저장소 img/ID.bin에 올리고, 본문에는 {{img:ID}} 한 줄을 넣는다.
+   본문 아래에 작은 그림으로 보이고(누르면 크게, ✕는 본문에서 뺌), 옵시디언에는 Attachments/memo-ID.jpg 첨부와 ![[…]] 링크로 기록된다(scripts/inbox-memo.mjs) */
+const IMG_RE = /\{\{img:([0-9a-f]{16})\}\}/g, IMG_MIME = { 1: 'image/jpeg', 2: 'image/png', 3: 'image/webp' };
+const IMG_MEM = new Map(), IMG_FAIL = new Set(), IMG_ENC = new Map();   // 화면용 주소 / 불러오기 실패 / 올리기 전·실패한 암호문(메모리 보관)
+let IDBP = null;
+function idb() {   // 연결은 하나만 열어 재사용 (다른 곳에서 지우려 하면 닫음)
+  return IDBP || (IDBP = new Promise(ok => {
+    try { const r = indexedDB.open('memo-img', 1); r.onupgradeneeded = () => r.result.createObjectStore('img', { keyPath: 'id' }); r.onsuccess = () => { r.result.onversionchange = () => { r.result.close(); IDBP = null; }; ok(r.result); }; r.onerror = () => { IDBP = null; ok(null); }; } catch { IDBP = null; ok(null); }
+  }));
+}
+async function idbDo(mode, fn) { const db = await idb(); if (!db) return undefined; return new Promise(ok => { try { const t = db.transaction('img', mode), q = fn(t.objectStore('img')); t.oncomplete = () => ok(q?.result); t.onerror = t.onabort = () => ok(undefined); } catch { ok(undefined); } }); }
+const idbGet = id => idbDo('readonly', st => st.get(id)), idbPut = rec => idbDo('readwrite', st => st.put(rec)), idbAll = () => idbDo('readonly', st => st.getAll());
+async function shrinkImage(file) {
+  const bmp = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85)); if (!blob) throw new Error('변환 실패'); return blob;
+}
+const imgApi = id => { const c = cfg(); return `https://api.github.com/repos/${c.repo}/contents/img/${id}.bin`; };
+async function uploadImg(id, enc) {
+  const token = DB?.settings?.token; if (!token) return false;
+  const r = await fetch(imgApi(id), { method: 'PUT', headers: { ...ghHeaders(token), 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '메모 이미지', content: b64(enc), branch: cfg().branch }) });
+  if (r.ok || r.status === 422) return true;   // 422: 이미 있음
+  throw new Error(`이미지 저장 실패 (${r.status})${r.status === 401 || r.status === 403 ? ' · 토큰 권한 확인' : ''}`);
+}
+let flushing = false;
+async function flushImages() {
+  if (flushing || !KEY || !DB?.settings?.token) return;
+  flushing = true;
+  try {
+    const recs = new Map((await idbAll() || []).filter(r => !r.uploaded).map(r => [r.id, r.enc]));
+    for (const [id, e] of IMG_ENC) recs.set(id, e);
+    for (const [id, enc] of recs) {
+      try { if (await uploadImg(id, enc)) { IMG_ENC.delete(id); await idbPut({ id, enc, uploaded: true }); } }
+      catch (e) { toast(e.message); break; }
+    }
+  } finally { flushing = false; }
+}
+async function fetchImg(id) {
+  const r = await fetch(`${imgApi(id)}?ref=${encodeURIComponent(cfg().branch)}`, { headers: { ...ghHeaders(DB?.settings?.token), Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
+  if (!r.ok) throw new Error(`이미지 읽기 실패 (${r.status})`);
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function imageURL(id) {
+  if (IMG_MEM.has(id)) return IMG_MEM.get(id);
+  let rec = await idbGet(id), enc = rec?.enc || IMG_ENC.get(id);
+  if (!enc) { enc = await fetchImg(id); idbPut({ id, enc, uploaded: true }); }
+  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: enc.slice(0, 12) }, KEY, enc.slice(12)));
+  const url = URL.createObjectURL(new Blob([pt.slice(1)], { type: IMG_MIME[pt[0]] || 'image/jpeg' }));
+  IMG_MEM.set(id, url); return url;
+}
+async function addImage(file, taId) {
+  if (!KEY) return;
+  try {
+    const blob = await shrinkImage(file), id = [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('');
+    const plain = new Uint8Array(1 + blob.size); plain[0] = 1; plain.set(new Uint8Array(await blob.arrayBuffer()), 1);
+    const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, KEY, plain));
+    const enc = new Uint8Array(12 + ct.length); enc.set(iv); enc.set(ct, 12);
+    IMG_ENC.set(id, enc); idbPut({ id, enc, uploaded: false });
+    IMG_MEM.set(id, URL.createObjectURL(blob));
+    const el = $(taId); el.focus();
+    const ins = `${el.value && !el.value.slice(0, el.selectionStart).endsWith('\n') ? '\n' : ''}{{img:${id}}}\n`;
+    if (!document.execCommand('insertText', false, ins)) { el.setRangeText(ins, el.selectionStart, el.selectionEnd, 'end'); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (!DB.settings.token) toast('토큰이 없어 이 기기에만 저장됩니다 (설정에서 토큰 입력)'); else flushImages();
+  } catch (e) { toast('그림을 넣지 못했습니다: ' + e.message); }
+}
+function renderImgs(taId, boxId) {
+  const box = $(boxId), ids = [...new Set([...$(taId).value.matchAll(IMG_RE)].map(m => m[1]))], sig = ids.join(',');
+  if (box.dataset.sig === sig && !ids.some(i => IMG_FAIL.has(i))) return;
+  box.dataset.sig = sig; box.innerHTML = '';
+  for (const id of ids) {
+    const d = document.createElement('div'); d.className = 'thumb'; d.innerHTML = '<div class="ph">불러오는 중…</div><button type="button" class="x" aria-label="그림 빼기">✕</button>'; box.append(d);
+    IMG_FAIL.delete(id);
+    imageURL(id).then(url => { const im = new Image(); im.src = url; im.alt = ''; im.onclick = () => { $('imgView').firstElementChild.src = url; $('imgView').classList.remove('hidden'); }; d.querySelector('.ph').replaceWith(im); })
+      .catch(() => { IMG_FAIL.add(id); const ph = d.querySelector('.ph'); if (ph) ph.textContent = '그림을 못 불러옴'; });
+    d.querySelector('.x').onclick = () => {
+      const el = $(taId); el.value = el.value.replace(new RegExp(`\\n?\\{\\{img:${id}\\}\\}\\n?`, 'g'), '\n').replace(/^\n+/, ''); el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+  }
+}
+const IMG_BOXES = [['note', 'imgsNote'], ['think', 'imgsThink'], ['pastNote', 'imgsPastNote'], ['pastThink', 'imgsPastThink']];
+function renderAllImgs() { if (KEY) for (const [t, b] of IMG_BOXES) renderImgs(t, b); }
+for (const [t, b] of IMG_BOXES) $(t).addEventListener('input', () => renderImgs(t, b));
+$('imgView').onclick = () => $('imgView').classList.add('hidden');
+let imgTarget = 'note';
+for (const [btn, ta] of [['addImgNote', 'note'], ['addImgThink', 'think']]) $(btn).onclick = () => { imgTarget = ta; $('imgPick').click(); };
+$('imgPick').onchange = async () => { const fs = [...$('imgPick').files]; $('imgPick').value = ''; for (const f of fs) await addImage(f, imgTarget); };
+window.addEventListener('online', () => flushImages());
 
 /* 표 붙여넣기: 엑셀·구글 시트·웹의 표를 복사해 붙이면
    Refer·Thinking(자유 칸)에는 마크다운 표(옵시디언에서도 표로 보임), To do·Completed(줄 단위 칸)에는 한 줄(칸 | 칸)로 바뀐다. 표가 아닌 붙여넣기는 그대로 */
@@ -772,9 +876,18 @@ function tableText(rows, md) {
   const esc = c => c.replace(/\|/g, '\\|').replace(/\n/g, '<br>'), line = r => '| ' + r.map(esc).join(' | ') + ' |';
   return [line(rows[0]), '| ' + rows[0].map(() => '---').join(' | ') + ' |', ...rows.slice(1).map(line)].join('\n');
 }
+for (const id of ['note', 'think', 'pastNote', 'pastThink']) {   // 그림 끌어놓기
+  $(id).addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); });
+  $(id).addEventListener('drop', e => { const fs = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')); if (!fs.length) return; e.preventDefault(); (async () => { for (const f of fs) await addImage(f, id); })(); });
+}
 for (const [id, md] of [['note', true], ['think', true], ['pastNote', true], ['pastThink', true], ['done', false], ['todo', false], ['pastDone', false], ['pastTodo', false]]) {
   $(id).addEventListener('paste', e => {
-    const rows = tableFromClipboard(e.clipboardData); if (!rows) return;
+    const rows = tableFromClipboard(e.clipboardData);
+    if (!rows) {   // 표가 아니면: 그림이 들어 있는 붙여넣기는 그림으로 (Refer·Thinking만)
+      const f = md && [...e.clipboardData.files].find(x => x.type.startsWith('image/'));
+      if (f) { e.preventDefault(); addImage(f, id); }
+      return;
+    }
     e.preventDefault();
     const el = e.target, before = el.value.slice(0, el.selectionStart), after = el.value.slice(el.selectionEnd);
     let ins = tableText(rows, md);
@@ -792,7 +905,7 @@ function openViewer(k) {
   $('pastDone').value = doneOf(k); $('pastTodo').value = todoOf(k); $('pastNote').value = textOf(k); $('pastThink').value = thinkOf(k);
   $('vSent').textContent = DB.weeks[k]?.obsidianAt ? `옵시디언 전송 ${fmtDT(DB.weeks[k].obsidianAt)}` : '';
   $('viewer').classList.remove('hidden');
-  viewerCounts(); growViewer();
+  viewerCounts(); growViewer(); renderAllImgs();
 }
 $('pastList').addEventListener('click', e => { const b = e.target.closest('.past'); if (b) openViewer(b.dataset.wk); });
 for (const [id, f, uf] of [['pastDone', 'completed', 'completedUpdated'], ['pastTodo', 'todo', 'todoUpdated'], ['pastNote', 'text', 'updated'], ['pastThink', 'thinking', 'thinkingUpdated']]) {
@@ -809,7 +922,7 @@ function weekMarkdown(key) {
     `# ${key} 메모장`, '', `> ${weekRange(key)} · 완료 ${nd} · 할 일 ${nt} · 완료율 ${rate}%`, '',
     '## ✅ Completed Tasks', '', ...(nd ? itemLines(done, 'x') : ['_없음_']), '',
     '## 📋 To do List', '', ...(nt ? itemLines(todo, ' ') : ['_없음_']), '',
-    '## 📝 Refer', '', memo.trim() || '_없음_', ''].join('\n');
+    '## 📝 Refer', '', memo.replace(/\{\{img:[0-9a-f]{16}\}\}/g, '[이미지]').trim() || '_없음_', ''].join('\n');
 }
 /* ───────── 옵시디언 저장소에 바로 기록 (GitHub API) ─────────
    앱이 옵시디언 저장소의 노트를 직접 만들거나 고친다. scripts/export-obsidian.mjs(일요일 자동 기록)와 같은 형식·같은 보호 규칙:

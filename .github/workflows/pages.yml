@@ -3,7 +3,7 @@ name: 메모 앱 배포
 on:
   push:
     branches: [main]
-    paths-ignore: ["vault.json"]
+    paths-ignore: ["vault.json", "img/**"]
   workflow_dispatch:
 permissions:
   contents: write

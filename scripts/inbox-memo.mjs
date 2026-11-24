@@ -4,7 +4,7 @@
 //   내용이 바뀐 경우에만 다시 쓴다. 정리 루틴이 노트를 다른 폴더로 옮겨도 `memo-app` 속성으로 찾아 그 자리에서 갱신한다
 // 사용: MEMO_PASSWORD=... node scripts/inbox-memo.mjs <vault.json> <옵시디언 저장소 폴더>
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSync, readSync, closeSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { webcrypto as crypto, createHash } from 'node:crypto';
 
 const [vaultPath, outRoot] = process.argv.slice(2);
@@ -29,10 +29,10 @@ const weekEnd = key => { const e = weekStart(key); e.setDate(e.getDate() + 7); r
 const unb64 = s => Uint8Array.from(Buffer.from(s, 'base64'));
 async function openVault(file, pw) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(file.kdf.salt), iterations: file.kdf.iter }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(file.iv) }, key, unb64(file.ct))));
+  KEYOBJ = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: unb64(file.kdf.salt), iterations: file.kdf.iter }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(file.iv) }, KEYOBJ, unb64(file.ct))));
 }
-let db;
+let db, KEYOBJ;
 try { db = await openVault(JSON.parse(readFileSync(vaultPath, 'utf8')), password); }
 catch { console.error('복호화 실패: MEMO_PASSWORD가 앱 비밀번호와 같은지 확인하세요'); process.exit(1); }
 
@@ -72,6 +72,27 @@ function findNote(kind, key) {
 
 const textOfWeek = w => typeof w?.text === 'string' ? w.text : '';      // Refer
 const thinkOfWeek = w => typeof w?.thinking === 'string' ? w.thinking : '';
+
+/* 붙여넣은 이미지: 본문의 {{img:ID}}를 옵시디언 첨부(Attachments/memo-ID.jpg) 링크로 바꾼다.
+   이미지는 앱이 같은 열쇠로 암호화해 이 저장소의 img/ID.bin에 올려 둔다(1바이트 종류 + 이미지). 아직 올라오지 않았으면 자리표시만 남기고 다음 실행에 다시 시도 */
+const IMG_RE = /\{\{img:([0-9a-f]{16})\}\}/g, IMG_DIR = join(dirname(vaultPath), 'img'), ATT_DIR = join(outRoot, 'Attachments');
+const EXT = { 1: 'jpg', 2: 'png', 3: 'webp' };
+async function withImages(text) {
+  const t = String(text || ''), ids = [...new Set([...t.matchAll(IMG_RE)].map(m => m[1]))], link = {};
+  for (const id of ids) {
+    const f = join(IMG_DIR, `${id}.bin`);
+    try {
+      const have = Object.values(EXT).map(x => `memo-${id}.${x}`).find(n => existsSync(join(ATT_DIR, n)));
+      if (have) { link[id] = `![[${have}]]`; continue; }
+      if (!existsSync(f)) throw new Error('아직 없음');
+      const raw = new Uint8Array(readFileSync(f)), pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, KEYOBJ, raw.slice(12)));
+      const name = `memo-${id}.${EXT[pt[0]] || 'jpg'}`;
+      mkdirSync(ATT_DIR, { recursive: true }); writeFileSync(join(ATT_DIR, name), pt.slice(1)); link[id] = `![[${name}]]`;
+      console.log(`이미지: Attachments/${name}`);
+    } catch { link[id] = `_(이미지 ${id} 처리 대기)_`; }
+  }
+  return t.replace(IMG_RE, (_, id) => link[id]);
+}
 const box = (t, mark) => String(t || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `- [${mark}] ${l.replace(/^(?:[-*•]\s+)?(?:\[[ xX\/-]\]\s*)?/, '')}`);
 const front = (key, kind, savedAt, tags) => ['---', `week: ${key}`, `period: ${ymd(weekStart(key))} ${hm(weekStart(key))} ~ ${ymd(weekEnd(key))} ${hm(weekEnd(key))}`, `saved: ${savedAt}`, '보안: 개인정보', `tags: [${tags}]`, 'source: 메모 앱 (Actions가 매일 05:00·22:00에 기록)', `memo-app: ${kind}`, '---', ''];
 function memoNote(key, w, savedAt) {
@@ -99,8 +120,9 @@ for (const key of [prev, cur]) {
   const w = db.weeks?.[key]; if (!w) continue;
   const saved = w.updated || w.todoUpdated || w.completedUpdated || w.thinkingUpdated ? (d => `${ymd(d)} ${hm(d)}`)(new Date([w.updated, w.todoUpdated, w.completedUpdated, w.thinkingUpdated].filter(Boolean).sort().pop())) : `${ymd(now)} ${hm(now)}`;
   const h = (...p) => createHash('sha1').update(p.join('\0')).digest('hex').slice(0, 10);
+  const referT = await withImages(textOfWeek(w)), thinkT = await withImages(thinkOfWeek(w));   // 이미지는 링크로 바꾼 본문 기준으로 비교(이미지가 늦게 올라오면 다음 실행에 반영)
   if ([w.completed, w.todo, textOfWeek(w)].some(t => String(t || '').trim()) || findNote('memo', key))
-    put('memo', key, join(outRoot, FOLDER, `${key} 메모.md`), sv => memoNote(key, w, sv), h('inbox-v2', w.completed || '', w.todo || '', textOfWeek(w)), saved);
+    put('memo', key, join(outRoot, FOLDER, `${key} 메모.md`), sv => memoNote(key, { ...w, text: referT }, sv), h('inbox-v2', w.completed || '', w.todo || '', referT), saved);
   if (thinkOfWeek(w).trim() || findNote('thinking', key))
-    put('thinking', key, join(outRoot, THINK_FOLDER, `${key} Thinking.md`), sv => thinkNote(key, w, sv), h('think-v1', thinkOfWeek(w)), saved);
+    put('thinking', key, join(outRoot, THINK_FOLDER, `${key} Thinking.md`), sv => thinkNote(key, { ...w, thinking: thinkT }, sv), h('think-v1', thinkT), saved);
 }

@@ -82,7 +82,7 @@ function weekNote(key, done, todo, memo) {
     `# ${key} 메모장`, '', `> ${weekRange(key)} · 완료 ${nd} · 할 일 ${nt} · 완료율 ${rate}%`, '',
     '## ✅ Completed Tasks', '', ...(nd ? itemLines(done, 'x') : ['_없음_']), '',
     '## 📋 To do List', '', ...(nt ? itemLines(todo, ' ') : ['_없음_']), '',
-    '## 📝 Refer', '', memo.trim() || '_없음_', ''].join('\n');
+    '## 📝 Refer', '', memo.replace(/\{\{img:[0-9a-f]{16}\}\}/g, '[이미지]').trim() || '_없음_', ''].join('\n');
 }
 
 /* ───── 기존 노트 보호 ─────
