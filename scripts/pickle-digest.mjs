@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { webcrypto as crypto } from 'node:crypto';
+import { englishBrief } from './english-brief.mjs';
 
 const [vaultPath, outRoot] = process.argv.slice(2);
 const password = process.env.MEMO_PASSWORD;
@@ -211,16 +212,18 @@ async function hubActions() {
   } catch { return ['- AI 허브 상태를 읽지 못함']; }
 }
 const hubLines = await hubActions();
+const englishLines = englishBrief(outRoot, now);
 
 let out = ['---', `생성: ${ymd(now)} ${p2(now.getHours())}:${p2(now.getMinutes())}`, `기간: ${sinceStr} ~ ${ymd(now)}`, '보안: 개인정보', 'tags: [피클]', '원본: AI 초안 (메모 앱 Actions가 매일 갱신)', '---', '',
   '# 피클 브리핑용 요약', '',
   ...(isWeeklyDay ? [`> **오늘은 주간 요약도 있습니다**: 같은 폴더의 \`${WEEKLY_NAME}.md\`(${prev})를 함께 읽고, 브리핑 끝에 지난 주 돌아보기와 이번 주 기한을 덧붙이세요.`, ''] : []),
-  '> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 브리핑하세요. 순서: ① 오늘 정리 리포트 → ② 할 일 → ③ AI 작업 남은 일 → ③-1 자동화 조치 필요 → ④ Thinking → 메모장·기한. 개인정보 노트 본문은 넣지 않았고, 할 일과 Thinking은 사용자 본인 기록입니다.', '',
+  `> 이 노트 하나와 **구글 캘린더**(지난 7일·다음 7일)를 읽고 브리핑하세요. 순서: ① 오늘 정리 리포트 → ② 할 일 → ③ AI 작업 남은 일 → ③-1 자동화 조치 필요 → ④ Thinking${englishLines.length ? ' → ⑤ 전화영어 복습' : ''} → 메모장·기한. 개인정보 노트 본문은 넣지 않았고, 할 일과 Thinking${englishLines.length ? '·전화영어 복습' : ''}은 사용자 본인 기록입니다.`, '',
   '## ① 오늘 정리 리포트', '', ...todayReport(), '',
   '## ② 할 일 (기한 있는 것)', '', ...inboxTodos(), '',
   '## ③ AI 작업 남은 일', '', ...aiWork(), '',
   '## ③-1 자동화 조치 필요 (AI 허브)', '', '> 오류·주의가 있으면 먼저 말하고, [직접] 항목은 사용자가 할 일로 전하세요.', '', ...hubLines, '',
   '## ④ Thinking', '', ...thinking(), '',
+  ...englishLines,
   '## 이번 주 · 지난 주 메모장', '', ...weekBlock(cur, '이번 주'), ...weekBlock(prev, '지난 주'),
   '## 최근 7일 정리 리포트 요약', '', ...(sum.length ? sum : ['- 읽을 수 있는 리포트 없음']), '',
   ...(topDue ? [`## 다가오는 기한 (${latest} 리포트 기준)`, '', topDue, ''] : []),
